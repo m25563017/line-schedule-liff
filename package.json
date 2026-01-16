@@ -1,0 +1,22 @@
+{
+  "name": "line-schedule-liff",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@line/liff": "^2.27.3",
+    "@tailwindcss/vite": "^4.1.18",
+    "date-fns": "^4.1.0",
+    "tailwindcss": "^4.1.18",
+    "vue": "^3.5.24"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.1",
+    "vite": "^7.2.4"
+  }
+}
