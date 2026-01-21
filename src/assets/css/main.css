@@ -1,0 +1,378 @@
+@import "tailwindcss" prefix(tw);
+
+/* 自定義主題設置 */
+@theme {
+    /* 自定義響應式斷點 */
+    --breakpoint-sm: 640px;
+    --breakpoint-md: 768px;
+    --breakpoint-lg: 1024px;
+    --breakpoint-xl: 1280px;
+    --breakpoint-2xl: 1536px;
+}
+
+/* 自定義樣式 */
+
+@layer base {
+
+    html,
+    body {
+        font-family: 'Noto Sans TC', 'Roboto', sans-serif;
+        margin: 0;
+        padding: 0;
+        -webkit-font-smoothing: antialiased;
+        scroll-behavior: smooth;
+        background-color: var(--color-bg);
+        color: #191919;
+        overflow-x: hidden;
+        /* 防止滾動條變化導致的頁面移動 */
+        scrollbar-gutter: stable;
+        /* 確保頁面寬度計算包含滾動條 */
+        width: 100vw;
+        max-width: 100vw;
+        letter-spacing: 0.07em;
+        overflow: hidden;
+    }
+
+    /* 標題基礎樣式 */
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        margin: 0;
+        padding: 0;
+        font-weight: 500;
+        line-height: 1.2;
+        letter-spacing: 0.07em;
+    }
+
+    /* 響應式標題字體大小 */
+    h1 {
+        font-size: 28px;
+
+        @media (min-width: 768px) {
+            font-size: 56px;
+        }
+    }
+
+    h2 {
+        font-size: 24px;
+
+        @media (min-width: 768px) {
+            font-size: 44px;
+        }
+    }
+
+    h3 {
+        font-size: 24px;
+
+        @media (min-width: 768px) {
+            font-size: 36px;
+        }
+    }
+
+    h4 {
+        font-size: 20px;
+
+        @media (min-width: 768px) {
+            font-size: 24px;
+        }
+    }
+
+    h5 {
+        font-size: 22px;
+    }
+
+    h6 {
+        font-size: 20px;
+    }
+
+    p {
+        margin: 0;
+        padding: 0;
+        line-height: 1.6;
+    }
+
+    /* 連結樣式 */
+    a {
+        color: inherit;
+        text-decoration: none;
+        transition: color 0.3s ease;
+    }
+
+    /* 清單樣式重置 */
+    ul,
+    ol {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    /* 按鈕樣式重置 */
+    button {
+        margin: 0;
+        padding: 0;
+        border: none;
+        background: none;
+        font-family: inherit;
+        cursor: pointer;
+    }
+
+    /* 輸入框樣式重置 */
+    input,
+    textarea,
+    select {
+        margin: 0;
+        padding: 0;
+        border: none;
+        background: none;
+        font-family: inherit;
+        font-size: inherit;
+    }
+
+    /* 圖片樣式 */
+    img {
+        max-width: 100%;
+        height: auto;
+        display: block;
+    }
+
+
+    /* 全域變數 */
+    :root {
+        --color-white: #ffffff;
+        --color-black0--rgba: 0, 0, 0;
+        --color-black19: #191919;
+        --color-dark-gray: #9a9a9a;
+        --color-dark-gray2: #5a5a5a;
+        --color-gray: #dedede;
+        --color-gray2: #ece9e6;
+        --color-gray3: #e6e6e6;
+        --color-gray4: #dddddd;
+        --color-gray5: #c8c8c8;
+        --color-light-gray: #f8f8f8;
+        --color-light-gray2: #f4f4f4;
+        --color-red: #e60012;
+        --color-red2: #e93d2b;
+        --color-red3: #de3d2c;
+        --color-pink: #e58378;
+        --color-yellow: #F7CB3B;
+        --color-gold: #c8a856;
+        --color-gold2: #d1aa48;
+        --color-gold3: #c99c2b;
+        --color-gold3--rgba: 201, 156, 43;
+        --color-light-gold: #d8c38e;
+        --color-light-gold2: #ece7d8;
+        --color-twine: #c8a063;
+        --color-twine--rgba: 200, 160, 99;
+        --color-twine2: #b48a4b;
+        --color-linen: #f7f3ef;
+        --color-linen2: #faf7f3;
+        --color-linen3: #f7f4f1;
+        --color-brown: #7d4918;
+        --color-green: #008673;
+        --color-yellow: #fabf2a;
+        --color-ui-required: var(--color-red);
+        --color-ui-error: var(--color-red);
+        --color-facebook: #425ea6;
+        --color-instagram: var(--color-red2);
+        --color-sns-line: #21c65b;
+        --color-bg: #FEFAF6;
+        --color-ybg: #fefef6;
+        --color-ybg2: #ece9de;
+    }
+
+}
+
+@layer utilities {
+
+    /* Flexbox 工具類別 */
+    .tw\:flex-center {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .tw\:flex-between {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .tw\:flex-start {
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+    }
+
+    .tw\:flex-end {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+    }
+
+    .tw\:flex-col-center {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+    /* 容器工具類別 */
+    .tw\:container {
+        width: 100%;
+        position: relative;
+        margin: 0 auto;
+
+        @media (min-width: 640px) {
+            max-width: none;
+        }
+
+        @media (min-width: 768px) {
+            max-width: 960px;
+        }
+
+        @media (min-width: 1024px) {
+            max-width: 1080px;
+        }
+
+        @media (min-width: 1440px) {
+            max-width: 1360px;
+        }
+
+        @media (min-width: 1536px) {
+            max-width: 1440px;
+        }
+
+    }
+
+    /* 間距工具類別 */
+    .tw\:first-section {
+        margin-top: 80px;
+    }
+
+    .tw\:section {
+        padding: 40px 20px;
+        background-color: var(--color-bg);
+
+        @media (min-width: 768px) {
+            padding: 80px 0px;
+        }
+    }
+
+    .tw\:section-spacing {
+        padding-top: 60px;
+        padding-bottom: 60px;
+
+        @media (min-width: 768px) {
+            padding-top: 80px;
+            padding-bottom: 80px;
+        }
+
+        @media (min-width: 1024px) {
+            padding-top: 100px;
+            padding-bottom: 100px;
+        }
+    }
+
+    /* 文字工具類別 */
+    .tw\:text-balance {
+        text-wrap: balance;
+    }
+
+    .tw\:text-ellipsis {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .tw\:text-line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .tw\:text-line-clamp-3 {
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    /* 動畫工具類別 */
+    .tw\:transition-base {
+        transition: all 0.3s ease;
+    }
+
+    /* 按鈕基礎樣式 */
+    .tw\:btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 16px;
+        border-radius: 10px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        border: none;
+        outline: none;
+    }
+
+    .tw\:btn-primary {
+        background-color: var(--color-green);
+        color: var(--color-white);
+        border: 1px solid var(--color-green);
+    }
+
+    .tw\:btn-primary:hover {
+        background-color: var(--color-white);
+        color: var(--color-green);
+        border: 1px solid var(--color-green);
+    }
+
+    .tw\:btn-secondary {
+        background-color: var(--color-gold);
+        color: var(--color-white);
+        border: 1px solid var(--color-gold);
+    }
+
+    .tw\:btn-secondary:hover {
+        background-color: var(--color-white);
+        color: var(--color-gold);
+        border: 1px solid var(--color-gold);
+    }
+
+    .tw\:btn-outline {
+        background-color: var(--color-white);
+        border: 1px solid var(--color-green);
+        color: var(--color-green);
+    }
+
+    .tw\:btn-outline:hover {
+        background-color: var(--color-green);
+        color: var(--color-white);
+    }
+
+
+    /* 佈局工具 */
+    .tw\:full-width {
+        width: 100vw;
+        margin-left: calc(-50vw + 50%);
+    }
+
+    .tw\:aspect-square {
+        aspect-ratio: 1 / 1;
+    }
+
+    .tw\:aspect-video {
+        aspect-ratio: 16 / 9;
+    }
+
+    .tw\:aspect-4-3 {
+        aspect-ratio: 4 / 3;
+    }
+}
