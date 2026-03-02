@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, inject } from "vue";
 import { useRoute } from "vue-router";
 import { db } from "../utils/firebase";
 import {
@@ -13,6 +13,7 @@ import {
 
 const route = useRoute();
 const groupId = route.params.id;
+const userProfile = inject("userProfile");
 const group = ref(null);
 const events = ref([]);
 const loading = ref(true);
@@ -51,7 +52,7 @@ onMounted(async () => {
             />
             <div
                 v-else
-                class="tw:w-full tw:h-full tw:bg-gradient-to-br tw:from-green-400 tw:to-blue-500"
+                class="tw:w-full tw:h-full tw:bg-linear-to-br tw:from-green-400 tw:to-blue-500"
             ></div>
 
             <router-link
@@ -61,8 +62,16 @@ onMounted(async () => {
                 ⬅
             </router-link>
 
+            <router-link
+                v-if="group.createdBy === userProfile?.userId"
+                :to="`/group/${group.id}/edit`"
+                class="tw:absolute tw:top-4 tw:right-4 tw:bg-black/30 tw:text-white tw:p-2 tw:rounded-full tw:backdrop-blur-sm tw:flex tw:items-center tw:justify-center tw:w-10 tw:h-10 hover:tw:bg-black/50 tw:transition"
+            >
+                ⚙️
+            </router-link>
+
             <div
-                class="tw:absolute tw:bottom-0 tw:left-0 tw:w-full tw:bg-gradient-to-t tw:from-black/60 tw:to-transparent tw:p-4 tw:pt-10"
+                class="tw:absolute tw:bottom-0 tw:left-0 tw:w-full tw:bg-linear-to-t tw:from-black/60 tw:to-transparent tw:p-4 tw:pt-10"
             >
                 <h1 class="tw:text-2xl tw:font-bold tw:text-white">
                     {{ group.name }}
@@ -133,20 +142,46 @@ onMounted(async () => {
                         </div>
 
                         <div class="tw:flex tw:justify-between tw:items-end">
-                            <div class="tw:text-xs tw:text-gray-500">
+                            <div
+                                class="tw:text-xs tw:text-gray-500 tw:space-y-1.5"
+                            >
+                                <div class="tw:flex tw:items-center tw:gap-1.5">
+                                    <img
+                                        :src="
+                                            group.members[evt.createdBy]
+                                                ?.pictureUrl ||
+                                            'https://via.placeholder.com/40'
+                                        "
+                                        class="tw:w-4 tw:h-4 tw:rounded-full tw:object-cover tw:border tw:border-gray-200"
+                                    />
+                                    <span
+                                        >{{
+                                            group.members[evt.createdBy]
+                                                ?.displayName || "未知成員"
+                                        }}
+                                        發起</span
+                                    >
+                                </div>
+
                                 <div
                                     v-if="evt.finalDate"
                                     class="tw:font-bold tw:text-orange-600"
                                 >
-                                    日期：{{
+                                    📌 決定日期：{{
                                         evt.finalDate.replace(/-/g, " / ")
                                     }}
                                 </div>
                                 <div v-else>
-                                    開放區間：{{ evt.targetMonths.length }} 個月
+                                    ⏳ 開放區間：{{
+                                        evt.targetMonths.length
+                                    }}
+                                    個月
                                 </div>
                             </div>
-                            <span class="tw:text-gray-300 tw:text-sm">➜</span>
+
+                            <span class="tw:text-gray-300 tw:text-sm tw:mb-1"
+                                >➜</span
+                            >
                         </div>
                     </router-link>
                 </div>

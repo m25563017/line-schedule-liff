@@ -1,17 +1,18 @@
 <script setup>
 import { ref, inject, onMounted, computed, watch } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { db } from "../utils/firebase";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
-
+import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { useNotify } from "@pieda/core";
 import EventCalendar from "../components/EventCalendar.vue";
 import EventStats from "../components/EventStats.vue";
 
 const route = useRoute();
+const router = useRouter();
 const userProfile = inject("userProfile");
 const groupId = route.params.id;
 const eventId = route.params.eventId;
-
+const $notify = useNotify();
 const group = ref(null);
 const event = ref(null);
 const loading = ref(true);
@@ -22,6 +23,7 @@ const availabilities = ref({});
 const selectedUserId = ref("");
 const tempDates = ref([]);
 const focusedDate = ref(null);
+const isDeleting = ref(false);
 
 const colorPalette = [
     "tw:bg-red-400",
@@ -203,6 +205,41 @@ const saveChanges = async () => {
         isSaving.value = false;
     }
 };
+
+// 刪除活動
+const handleDeleteEvent = () => {
+    $notify
+        .alert({
+            title: "系統通知",
+            message: "確定要刪除此活動嗎？成員的填寫紀錄將無法復原！",
+            variant: "question",
+            confirm: true,
+        })
+        .then(async (result) => {
+            if (!result.isConfirmed) return; // 使用者按取消，不做任何事
+
+            isDeleting.value = true;
+            try {
+                const eventRef = doc(db, "groups", groupId, "events", eventId);
+                await deleteDoc(eventRef);
+                $notify.alert({
+                    title: "系統通知",
+                    message: "活動已成功刪除",
+                    variant: "success",
+                });
+                router.push(`/group/${groupId}`); // 刪除成功後跳回群組首頁
+            } catch (e) {
+                console.error("刪除失敗", e);
+                $notify.alert({
+                    title: "系統通知",
+                    message: "刪除失敗，請稍後再試。",
+                    variant: "error",
+                });
+            } finally {
+                isDeleting.value = false;
+            }
+        });
+};
 </script>
 
 <template>
@@ -232,6 +269,14 @@ const saveChanges = async () => {
             <h1 class="tw:text-lg tw:font-bold tw:text-gray-800">
                 {{ isEditing ? "選擇日期" : event.title }}
             </h1>
+            <button
+                v-if="isCurrentUserAdmin && !isEditing"
+                @click="handleDeleteEvent"
+                :disabled="isDeleting"
+                class="tw:absolute tw:right-4 tw:top-4 tw:text-lg tw:text-gray-400 hover:tw:text-red-500 tw:transition disabled:tw:opacity-50"
+            >
+                🗑️
+            </button>
         </div>
 
         <div

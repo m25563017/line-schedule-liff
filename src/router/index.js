@@ -4,6 +4,7 @@ import CreateGroup from "../views/CreateGroup.vue";
 import GroupDetail from "../views/GroupDetail.vue";
 import CreateEvent from "../views/CreateEvent.vue";
 import EventDetail from "../views/EventDetail.vue";
+import EditGroup from "../views/EditGroup.vue";
 
 const routes = [
     {
@@ -15,6 +16,11 @@ const routes = [
         path: "/create",
         name: "CreateGroup",
         component: CreateGroup,
+    },
+    {
+        path: "/group/:id/edit",
+        name: "EditGroup",
+        component: EditGroup,
     },
     {
         path: "/group/:id",
