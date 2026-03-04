@@ -8,6 +8,10 @@
     --breakpoint-lg: 1024px;
     --breakpoint-xl: 1280px;
     --breakpoint-2xl: 1536px;
+    /* 定義你的主色調變數 */
+  --color-primary: #508974;    /* 🌿 莫蘭迪綠 (主色) */
+  --color-accent: #FF9C1A;     /* ☀️ 暖陽橘 (強調色) */
+  --color-secondary: #6593C1;  /* ☁️ 柔和藍 (輔助色) */
 }
 
 /* 自定義樣式 */

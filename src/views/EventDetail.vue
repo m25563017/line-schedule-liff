@@ -26,13 +26,13 @@ const focusedDate = ref(null);
 const isDeleting = ref(false);
 
 const colorPalette = [
-    "tw:bg-red-400",
-    "tw:bg-blue-400",
-    "tw:bg-yellow-400",
+    "tw:bg-primary", // 綠
+    "tw:bg-accent", // 橘
+    "tw:bg-secondary", // 藍
+    "tw:bg-rose-400",
     "tw:bg-purple-400",
-    "tw:bg-pink-400",
     "tw:bg-teal-400",
-    "tw:bg-orange-400",
+    "tw:bg-yellow-500",
 ];
 
 onMounted(async () => {
@@ -257,14 +257,39 @@ const handleDeleteEvent = () => {
                 v-if="!isEditing"
                 :to="`/group/${groupId}`"
                 class="tw:absolute tw:left-4 tw:top-4 tw:text-xl tw:text-gray-500 hover:tw:text-gray-800"
-                >⬅</router-link
             >
+                <svg
+                    class="tw:w-5 tw:h-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="2.5"
+                    stroke="currentColor"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M15.75 19.5 8.25 12l7.5-7.5"
+                    />
+                </svg>
+            </router-link>
             <button
                 v-else
                 @click="stopEditing"
                 class="tw:absolute tw:left-4 tw:top-4 tw:text-xl tw:text-gray-500 hover:tw:text-gray-800"
             >
-                ⬅
+                <svg
+                    class="tw:w-5 tw:h-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="2.5"
+                    stroke="currentColor"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M15.75 19.5 8.25 12l7.5-7.5"
+                    />
+                </svg>
             </button>
             <h1 class="tw:text-lg tw:font-bold tw:text-gray-800">
                 {{ isEditing ? "選擇日期" : event.title }}
@@ -275,7 +300,19 @@ const handleDeleteEvent = () => {
                 :disabled="isDeleting"
                 class="tw:absolute tw:right-4 tw:top-4 tw:text-lg tw:text-gray-400 hover:tw:text-red-500 tw:transition disabled:tw:opacity-50"
             >
-                🗑️
+                <svg
+                    class="tw:w-5 tw:h-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="2"
+                    stroke="currentColor"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
+                    />
+                </svg>
             </button>
         </div>
 
@@ -284,9 +321,21 @@ const handleDeleteEvent = () => {
         >
             <div
                 v-if="isFinalized"
-                class="tw:bg-gradient-to-r tw:from-yellow-400 tw:to-orange-400 tw:text-white tw:p-4 tw:rounded-xl tw:shadow-md tw:mb-4 tw:text-center tw:animate-fade-in"
+                class="tw:bg-accent tw:text-white tw:p-4 tw:rounded-xl tw:shadow-md tw:mb-4 tw:text-center tw:animate-fade-in"
             >
-                <div class="tw:text-2xl tw:mb-1">🎉</div>
+                <svg
+                    class="tw:w-6 tw:h-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="2"
+                    stroke="currentColor"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M5.8 11.3L2 22l10.7-3.79M4 3h.01M22 8h.01M15 2h.01M22 20h.01M20 2.75a2.9 2.9 0 00-1.96 3.12v0c.1.86-.57 1.63-1.45 1.63h-.38c-.86 0-1.6.6-1.76 1.44L14 10m8 3l-.82-.33c-.86-.36-1.82.14-2.08 1.02a1.94 1.94 0 01-2.42 1.34h0a1.95 1.95 0 00-2.46 1.3l-.33.83m-3.03 2.03l-3.14 3.14a2 2 0 01-2.82 0l-1.18-1.18a2 2 0 010-2.82L7 12m4.5-.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5z"
+                    />
+                </svg>
                 <div class="tw:text-sm tw:font-medium tw:opacity-90">
                     活動日期已定案
                 </div>
@@ -303,8 +352,26 @@ const handleDeleteEvent = () => {
             >
                 <label
                     class="tw:block tw:text-xs tw:font-bold tw:text-yellow-800 tw:mb-1"
-                    >👑 主揪專用：你現在要幫誰填寫？</label
                 >
+                    <span
+                        class="tw:inline-flex tw:items-center tw:justify-center tw:w-4 tw:h-4 tw:mr-1"
+                    >
+                        <svg
+                            class="tw:w-4 tw:h-4"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.8"
+                        >
+                            <path
+                                d="M4 10l2.5-4 3 3 2.5-5 2.5 5 3-3L20 10l-2 9H6l-2-9z"
+                                fill="currentColor"
+                                stroke-linejoin="round"
+                            />
+                        </svg>
+                    </span>
+                    主揪專用：你現在要幫誰填寫？
+                </label>
                 <select
                     v-model="selectedUserId"
                     class="tw:w-full tw:p-2 tw:bg-white tw:border tw:border-yellow-300 tw:rounded-lg tw:text-sm tw:outline-none"
@@ -339,7 +406,20 @@ const handleDeleteEvent = () => {
                 <h4
                     class="tw:font-bold tw:text-blue-800 tw:text-sm tw:mb-2 border-b tw:border-blue-200 tw:pb-1"
                 >
-                    📅 {{ focusedDate.replace(/-/g, "/") }} 可參加名單：
+                    <svg
+                        class="tw:w-5 tw:h-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="2.5"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M15.75 19.5 8.25 12l7.5-7.5"
+                        />
+                    </svg>
+                    {{ focusedDate.replace(/-/g, "/") }} 可參加名單：
                 </h4>
                 <div class="tw:flex tw:flex-wrap tw:gap-2 tw:mt-2">
                     <span
@@ -375,7 +455,22 @@ const handleDeleteEvent = () => {
                 disabled
                 class="tw:w-full tw:bg-gray-200 tw:text-gray-500 tw:py-3.5 tw:rounded-xl tw:font-bold tw:text-lg"
             >
-                🔒 活動已定案，無法再更改
+                <div class="tw:flex tw:items-center tw:gap-2">
+                    <svg
+                        class="tw:w-4 tw:h-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="2.5"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
+                        />
+                    </svg>
+                    <span>活動已定案，無法再更改</span>
+                </div>
             </button>
         </div>
         <div
@@ -385,15 +480,45 @@ const handleDeleteEvent = () => {
             <button
                 v-if="isCurrentUserAdmin"
                 @click="openDecideModal"
-                class="tw:flex-1 tw:bg-orange-500 tw:text-white tw:py-3.5 tw:rounded-xl tw:font-bold tw:shadow-md active:tw:scale-95 tw:transition"
+                class="tw:flex-1 tw:bg-accent tw:text-white tw:py-3.5 tw:rounded-xl tw:font-bold tw:shadow-md active:tw:scale-95 tw:transition"
             >
-                👑 決定日期
+                <span class="tw:inline-flex tw:items-center tw:gap-1">
+                    <svg
+                        class="tw:w-4 tw:h-4"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                    >
+                        <path
+                            d="M4 10l2.5-4 3 3 2.5-5 2.5 5 3-3L20 10l-2 9H6l-2-9z"
+                            fill="currentColor"
+                            stroke-linejoin="round"
+                        />
+                    </svg>
+                    <span>決定日期</span>
+                </span>
             </button>
             <button
                 @click="startEditing"
-                class="tw:flex-[2] tw:bg-[#06C755] tw:text-white tw:py-3.5 tw:rounded-xl tw:font-bold tw:text-lg tw:shadow-md active:tw:scale-95 tw:transition"
+                class="tw:flex-[2] tw:bg-primary tw:text-white tw:py-3.5 tw:rounded-xl tw:font-bold tw:text-lg tw:shadow-md active:tw:scale-95 tw:transition"
             >
-                我要選日子 ✏️
+                <span class="tw:inline-flex tw:items-center tw:gap-2">
+                    <span>我要選日子</span>
+                    <svg
+                        class="tw:w-4 tw:h-4"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                    >
+                        <path
+                            d="M16.862 3.487l3.651 3.651M4 20l3.5-.5L19 8.5 15.5 5 4.5 15.5 4 20z"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        />
+                    </svg>
+                </span>
             </button>
         </div>
         <div
@@ -410,7 +535,7 @@ const handleDeleteEvent = () => {
             <button
                 @click="saveChanges"
                 :disabled="isSaving"
-                class="tw:flex-1 tw:bg-[#06C755] tw:text-white tw:py-3.5 tw:rounded-xl tw:font-bold tw:shadow-md active:tw:scale-95 tw:transition disabled:tw:opacity-50"
+                class="tw:flex-1 tw:bg-primary tw:text-white tw:py-3.5 tw:rounded-xl tw:font-bold tw:shadow-md active:tw:scale-95 tw:transition disabled:tw:opacity-50"
             >
                 {{ isSaving ? "儲存中..." : "確認送出" }}
             </button>
@@ -424,7 +549,7 @@ const handleDeleteEvent = () => {
                 class="tw:bg-white tw:rounded-2xl tw:w-full tw:max-w-sm tw:p-6 tw:shadow-xl tw:animate-slide-up"
             >
                 <h2 class="tw:text-xl tw:font-bold tw:text-gray-800 tw:mb-2">
-                    拍板定案！🔨
+                    拍板定案！
                 </h2>
                 <p class="tw:text-sm tw:text-gray-500 tw:mb-6">
                     決定後，成員將無法再更改自己的空擋。請選擇最終的活動日期：

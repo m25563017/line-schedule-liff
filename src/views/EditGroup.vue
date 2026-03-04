@@ -8,12 +8,13 @@ import {
     uploadBytes,
     getDownloadURL,
 } from "firebase/storage";
+import { useNotify } from "@pieda/core";
 
 const route = useRoute();
 const router = useRouter();
 const userProfile = inject("userProfile");
 const groupId = route.params.id;
-
+const $notify = useNotify();
 const groupName = ref("");
 const groupImageFile = ref(null);
 const previewImage = ref(null);
@@ -35,7 +36,11 @@ onMounted(async () => {
 
             // 權限檢查：如果不是建立者，直接踢回首頁
             if (data.createdBy !== userProfile.value?.userId) {
-                alert("您沒有權限編輯此群組！");
+                $notify.alert({
+                    title: "系統通知",
+                    message: "您沒有權限編輯此群組！",
+                    variant: "error",
+                });
                 router.push(`/group/${groupId}`);
                 return;
             }
@@ -76,7 +81,12 @@ const handleFileChange = (event) => {
 
 // 新增虛擬成員
 const addVirtualMember = () => {
-    if (!newMemberName.value.trim()) return alert("請輸入成員名字");
+    if (!newMemberName.value.trim())
+        return $notify.alert({
+            title: "系統通知",
+            message: "請輸入成員名字",
+            variant: "info",
+        });
     members.value.push({
         id: `virtual_${Date.now()}`,
         name: newMemberName.value.trim(),
@@ -89,14 +99,28 @@ const addVirtualMember = () => {
 
 // 移除成員
 const removeMember = (index) => {
-    if (confirm("確定要移除此成員嗎？")) {
-        members.value.splice(index, 1);
-    }
+    $notify
+        .alert({
+            title: "系統通知",
+            message: "確定要移除此成員嗎？",
+            variant: "question",
+            confirm: true,
+        })
+        .then((result) => {
+            if (result.isConfirmed) {
+                members.value.splice(index, 1);
+            }
+        });
 };
 
 // 💾 儲存變更
 const handleUpdate = async () => {
-    if (!groupName.value.trim()) return alert("請輸入群組名稱");
+    if (!groupName.value.trim())
+        return $notify.alert({
+            title: "系統通知",
+            message: "請輸入群組名稱",
+            variant: "info",
+        });
     isSubmitting.value = true;
 
     try {
@@ -131,30 +155,56 @@ const handleUpdate = async () => {
             members: membersMap,
         });
 
-        alert("更新成功！");
+        $notify.alert({
+            title: "系統通知",
+            message: "更新成功！",
+            variant: "success",
+        });
         router.push(`/group/${groupId}`);
     } catch (e) {
         console.error("更新失敗", e);
-        alert("更新失敗");
+        $notify.alert({
+            title: "系統通知",
+            message: "更新失敗",
+            variant: "error",
+        });
     } finally {
         isSubmitting.value = false;
     }
 };
 
-// 🗑️ 刪除群組
+// 刪除群組
 const handleDeleteGroup = async () => {
-    if (confirm("⚠️ 警告：確定要刪除整個群組嗎？此操作無法復原！")) {
-        isSubmitting.value = true;
-        try {
-            await deleteDoc(doc(db, "groups", groupId));
-            alert("群組已刪除");
-            router.push("/list");
-        } catch (e) {
-            console.error("刪除失敗", e);
-            alert("刪除失敗");
-            isSubmitting.value = false;
-        }
-    }
+    $notify
+        .alert({
+            title: "系統通知",
+            message: "確定要刪除此群組嗎？此操作無法復原！",
+            variant: "question",
+            confirm: true,
+        })
+        .then(async (result) => {
+            if (!result.isConfirmed) return;
+
+            isSubmitting.value = true;
+            try {
+                await deleteDoc(doc(db, "groups", groupId));
+                $notify.alert({
+                    title: "系統通知",
+                    message: "群組已刪除",
+                    variant: "success",
+                });
+                router.push("/list");
+            } catch (e) {
+                console.error("刪除失敗", e);
+                $notify.alert({
+                    title: "系統通知",
+                    message: "刪除失敗",
+                    variant: "error",
+                });
+            } finally {
+                isSubmitting.value = false;
+            }
+        });
 };
 </script>
 
@@ -171,7 +221,19 @@ const handleDeleteGroup = async () => {
                 :to="`/group/${groupId}`"
                 class="tw:absolute tw:left-4 tw:top-4 tw:text-xl tw:text-gray-300 hover:tw:text-white"
             >
-                ⬅
+                <svg
+                    class="tw:w-5 tw:h-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="2.5"
+                    stroke="currentColor"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M15.75 19.5 8.25 12l7.5-7.5"
+                    />
+                </svg>
             </router-link>
             群組設定
         </div>
@@ -188,7 +250,7 @@ const handleDeleteGroup = async () => {
                         >更換封面</label
                     >
                     <label
-                        class="tw:block tw:w-full tw:h-32 tw:border-2 tw:border-dashed tw:border-gray-300 tw:rounded-xl tw:flex tw:flex-col tw:justify-center tw:items-center tw:cursor-pointer hover:tw:bg-gray-50 tw:transition tw:relative tw:overflow-hidden"
+                        class="tw:w-full tw:h-32 tw:border-2 tw:border-dashed tw:border-gray-300 tw:rounded-xl tw:flex tw:flex-col tw:justify-center tw:items-center tw:cursor-pointer hover:tw:bg-gray-50 tw:transition tw:relative tw:overflow-hidden"
                     >
                         <input
                             type="file"
@@ -202,7 +264,19 @@ const handleDeleteGroup = async () => {
                             class="tw:absolute tw:inset-0 tw:w-full tw:h-full tw:object-cover"
                         />
                         <div v-else class="tw:text-center tw:text-gray-400">
-                            <span class="tw:text-2xl tw:block tw:mb-1">☁️</span
+                            <svg
+                                class="tw:w-6 tw:h-6"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke-width="2"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z"
+                                />
+                            </svg>
                             ><span class="tw:text-xs">上傳新圖片</span>
                         </div>
                     </label>
@@ -306,13 +380,37 @@ const handleDeleteGroup = async () => {
                                 @click="removeMember(index)"
                                 class="tw:text-gray-400 hover:tw:text-red-500 tw:p-2"
                             >
-                                🗑️
+                                <svg
+                                    class="tw:w-5 tw:h-5"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke-width="2"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
+                                    />
+                                </svg>
                             </button>
                             <span
                                 v-else
                                 class="tw:text-green-500 tw:p-2 tw:text-sm"
-                                >🔒</span
-                            >
+                                ><svg
+                                    class="tw:w-4 tw:h-4"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke-width="2.5"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
+                                    />
+                                </svg>
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -323,7 +421,22 @@ const handleDeleteGroup = async () => {
                 :disabled="isSubmitting"
                 class="tw:w-full tw:bg-red-50 tw:text-red-600 tw:border tw:border-red-200 tw:py-3 tw:rounded-xl tw:font-bold tw:mb-6 active:tw:scale-95 tw:transition"
             >
-                🗑️ 刪除此群組
+                <div class="tw:flex tw:items-center tw:gap-2">
+                    <svg
+                        class="tw:w-5 tw:h-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="2"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
+                        />
+                    </svg>
+                    <span>刪除此群組</span>
+                </div>
             </button>
         </div>
 
@@ -333,7 +446,7 @@ const handleDeleteGroup = async () => {
             <button
                 @click="handleUpdate"
                 :disabled="isSubmitting"
-                class="tw:w-full tw:bg-[#06C755] tw:text-white tw:py-3.5 tw:rounded-xl tw:font-bold tw:text-lg tw:shadow-md active:tw:scale-95 tw:transition disabled:tw:opacity-50"
+                class="tw:w-full tw:bg-primary tw:text-white tw:py-3.5 tw:rounded-xl tw:font-bold tw:text-lg tw:shadow-md active:tw:scale-95 tw:transition disabled:tw:opacity-50"
             >
                 {{ isSubmitting ? "儲存中..." : "儲存變更" }}
             </button>

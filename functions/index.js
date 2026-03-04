@@ -35,7 +35,7 @@ exports.lineWebhook = functions.https.onRequest(async (req, res) => {
                         createdAt: admin.firestore.FieldValue.serverTimestamp(),
                         // 設定 3 個月後自動刪除 (TTL 欄位)
                         expireAt: admin.firestore.Timestamp.fromDate(
-                            new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)
+                            new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
                         ),
                         participants: {}, // 準備存大家的空檔
                     });
@@ -56,7 +56,7 @@ exports.lineWebhook = functions.https.onRequest(async (req, res) => {
                                 contents: [
                                     {
                                         type: "text",
-                                        text: "📅 新活動建立囉！",
+                                        text: "新活動建立囉！",
                                         weight: "bold",
                                         color: "#1DB446",
                                     },
@@ -98,7 +98,7 @@ exports.lineWebhook = functions.https.onRequest(async (req, res) => {
                 }
             }
             return Promise.resolve(null);
-        })
+        }),
     );
 
     res.json(results);

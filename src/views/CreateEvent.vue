@@ -74,15 +74,30 @@ const handleCreate = async () => {
 <template>
     <div class="tw:min-h-full tw:bg-gray-50 tw:flex tw:flex-col">
         <div
-            class="tw:bg-[#06C755] tw:text-white tw:p-4 tw:text-center tw:text-lg tw:font-bold tw:shadow-sm tw:relative"
+            class="tw:flex tw:items-center tw:justify-center tw:bg-primary tw:text-white tw:p-4 tw:text-center tw:text-lg tw:font-bold tw:shadow-sm tw:relative"
         >
-            發起新活動
             <router-link
                 :to="`/group/${groupId}`"
-                class="tw:absolute tw:left-4 tw:top-4 tw:text-sm tw:opacity-80 hover:tw:opacity-100"
+                class="tw:text-sm tw:absolute tw:left-4 tw:top-1/2 tw:-translate-y-1/2"
             >
-                ⬅ 返回
+                <div class="tw:flex tw:items-center tw:gap-2">
+                    <svg
+                        class="tw:w-5 tw:h-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="2.5"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M15.75 19.5 8.25 12l7.5-7.5"
+                        />
+                    </svg>
+                    <span>返回</span>
+                </div>
             </router-link>
+            <h1 class="tw:text-lg tw:font-bold">發起新活動</h1>
         </div>
 
         <div class="tw:p-6 tw:max-w-md tw:mx-auto tw:w-full tw:flex-1">
@@ -174,7 +189,7 @@ const handleCreate = async () => {
                 <button
                     @click="handleCreate"
                     :disabled="isSubmitting"
-                    class="tw:w-full tw:bg-[#06C755] tw:text-white tw:py-3.5 tw:rounded-lg tw:font-bold tw:text-lg tw:shadow-md active:tw:scale-95 tw:transition disabled:tw:opacity-50 mt-4"
+                    class="tw:w-full tw:bg-primary tw:text-white tw:py-3.5 tw:rounded-lg tw:font-bold tw:text-lg tw:shadow-md active:tw:scale-95 tw:transition disabled:tw:opacity-50 mt-4"
                 >
                     {{ isSubmitting ? "建立中..." : "確定發起" }}
                 </button>

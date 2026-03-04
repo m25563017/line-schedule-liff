@@ -68,8 +68,8 @@ defineEmits(["prev", "next", "date-click"]);
                                 ? isFinalized
                                     ? 'tw:bg-orange-500 tw:text-white tw:font-bold tw:shadow-lg tw:scale-110'
                                     : isEditing
-                                      ? 'tw:bg-[#06C755] tw:text-white tw:shadow-md tw:font-bold'
-                                      : 'tw:border-2 tw:border-[#06C755] tw:text-[#06C755] tw:font-bold'
+                                      ? 'tw:bg-primary tw:text-white tw:shadow-md tw:font-bold'
+                                      : 'tw:border-2 tw:border-primary tw:text-primary tw:font-bold'
                                 : 'hover:tw:bg-gray-100 tw:text-gray-700'
                         "
                     >

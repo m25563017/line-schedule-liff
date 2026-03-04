@@ -7,6 +7,7 @@ import EventDetail from "../views/EventDetail.vue";
 import EditGroup from "../views/EditGroup.vue";
 
 const routes = [
+    { path: "/", redirect: "/list" },
     {
         path: "/list",
         name: "GroupList",
@@ -38,6 +39,8 @@ const routes = [
         name: "EventDetail",
         component: EventDetail,
     },
+    //防呆
+    { path: "/:pathMatch(.*)*", redirect: "/list" },
 ];
 
 const router = createRouter({

@@ -13,7 +13,20 @@ defineProps({
             <h3
                 class="tw:font-bold tw:text-gray-800 tw:flex tw:items-center tw:gap-2 tw:mb-3"
             >
-                <span>🔥</span> 最多人有空的日期
+                <svg
+                    class="tw:w-6 tw:h-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="2"
+                    stroke="currentColor"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                </svg>
+                <span>最多人有空的日期</span>
             </h3>
             <div
                 v-if="topDates.length === 0"
