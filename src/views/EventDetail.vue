@@ -453,7 +453,7 @@ const handleDeleteEvent = () => {
         >
             <button
                 disabled
-                class="tw:w-full tw:bg-gray-200 tw:text-gray-500 tw:py-3.5 tw:rounded-xl tw:font-bold tw:text-lg"
+                class="tw:w-full tw:bg-gray-200 tw:text-gray-500 tw:py-3.5 tw:rounded-xl tw:font-bold tw:text-lg tw:flex tw:items-center tw:justify-center"
             >
                 <div class="tw:flex tw:items-center tw:gap-2">
                     <svg

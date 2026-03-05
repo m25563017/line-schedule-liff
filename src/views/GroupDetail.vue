@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, inject } from "vue";
+import { ref, onMounted, inject, computed } from "vue";
 import { useRoute } from "vue-router";
 import { db } from "../utils/firebase";
 import {
@@ -18,25 +18,118 @@ const userProfile = inject("userProfile");
 const group = ref(null);
 const events = ref([]);
 const loading = ref(true);
-const $notify = useNotify();
-const copyInviteLink = async () => {
-    // 產生專屬邀請網址 (例如: http://localhost:5173/group/123/join)
-    const link = `${window.location.origin}/group/${groupId}/join`;
 
+// 初始化 notify 套件
+const $notify = useNotify();
+
+// 🔗 邀請選單狀態
+const showInviteModal = ref(false);
+
+// 產生專屬邀請網址
+const inviteLink = computed(() => {
+    return `${window.location.origin}/#/group/${groupId}/join`;
+});
+
+// 1. 複製純文字連結
+const copyInviteLink = async () => {
     try {
-        await navigator.clipboard.writeText(link);
+        await navigator.clipboard.writeText(inviteLink.value);
         $notify.alert({
             title: "系統通知",
-            message: "邀請連結已複製！快去貼給 LINE 的朋友吧！\n\n" + link,
+            message: "邀請連結已複製！快去貼給 LINE 的朋友吧！",
             variant: "success",
         });
+        showInviteModal.value = false;
     } catch (err) {
         $notify.alert({
-            title: "系統通知",
-            message: "",
-            variant: "error",
+            title: "請手動複製",
+            message:
+                "您的裝置不支援自動複製，請手動複製以下連結：\n\n" +
+                inviteLink.value,
+            variant: "warning",
         });
     }
+};
+
+// Flex Message
+const shareToLine = async () => {
+    if (window.liff && window.liff.isApiAvailable("shareTargetPicker")) {
+        try {
+            await window.liff.shareTargetPicker([
+                {
+                    type: "flex",
+                    altText: `邀請您加入 ${group.value.name}`,
+                    contents: {
+                        type: "bubble",
+                        hero: {
+                            type: "image",
+                            url:
+                                group.value.coverUrl ||
+                                "https://via.placeholder.com/800x400/508974/FFFFFF?text=Join+Group",
+                            size: "full",
+                            aspectRatio: "20:13",
+                            aspectMode: "cover",
+                        },
+                        body: {
+                            type: "box",
+                            layout: "vertical",
+                            contents: [
+                                {
+                                    type: "text",
+                                    text: group.value.name,
+                                    weight: "bold",
+                                    size: "xl",
+                                },
+                                {
+                                    type: "text",
+                                    text: "趕緊加入群組來快速排行程，將下面連結設成群組公告更加方便！",
+                                    wrap: true,
+                                    color: "#666666",
+                                    size: "sm",
+                                    margin: "md",
+                                },
+                            ],
+                        },
+                        footer: {
+                            type: "box",
+                            layout: "vertical",
+                            spacing: "sm",
+                            contents: [
+                                {
+                                    type: "button",
+                                    style: "primary",
+                                    color: "#508974",
+                                    height: "sm",
+                                    action: {
+                                        type: "uri",
+                                        label: "加入群組",
+                                        uri: inviteLink.value,
+                                    },
+                                },
+                            ],
+                            flex: 0,
+                        },
+                    },
+                },
+            ]);
+            showInviteModal.value = false;
+        } catch (error) {
+            console.error("分享失敗", error);
+            fallbackShare();
+        }
+    } else {
+        fallbackShare();
+    }
+};
+
+// 降級純文字分享 (開啟 LINE 分享連結)
+const fallbackShare = () => {
+    const text = `邀請你加入「${group.value.name}」！快點擊連結加入吧：`;
+
+    const lineShareUrl = `https://lineit.line.me/share/ui?text=${encodeURIComponent(text)}&url=${encodeURIComponent(inviteLink.value)}`;
+
+    window.open(lineShareUrl, "_blank");
+    showInviteModal.value = false;
 };
 
 onMounted(async () => {
@@ -57,6 +150,11 @@ onMounted(async () => {
         }));
     } catch (e) {
         console.error("讀取失敗", e);
+        $notify.alert({
+            title: "系統通知",
+            message: "讀取群組資料失敗，請稍後再試。",
+            variant: "error",
+        });
     } finally {
         loading.value = false;
     }
@@ -64,7 +162,11 @@ onMounted(async () => {
 </script>
 
 <template>
-    <div v-if="group" class="tw:min-h-full tw:bg-gray-50 tw:pb-20">
+    <div v-if="loading" class="tw:p-10 tw:text-center tw:text-gray-500">
+        載入中...
+    </div>
+
+    <div v-else-if="group" class="tw:min-h-full tw:bg-gray-50 tw:pb-20">
         <div class="tw:relative tw:h-48 tw:bg-gray-200">
             <img
                 v-if="group.coverUrl"
@@ -79,7 +181,7 @@ onMounted(async () => {
             />
             <div
                 v-else
-                class="tw:w-full tw:h-full tw:bg-linear-to-br tw:from-green-400 tw:to-blue-500"
+                class="tw:w-full tw:h-full tw:bg-linear-to-br tw:from-primary tw:to-secondary"
             ></div>
 
             <router-link
@@ -156,6 +258,7 @@ onMounted(async () => {
                 </router-link>
 
                 <button
+                    @click="showInviteModal = true"
                     class="tw:bg-gray-100 tw:text-gray-700 tw:p-3 tw:rounded-lg tw:font-bold tw:flex tw:flex-col tw:items-center tw:gap-1 active:tw:scale-95 tw:transition"
                 >
                     <svg
@@ -207,19 +310,17 @@ onMounted(async () => {
                             <span class="tw:font-bold tw:text-gray-800">{{
                                 evt.title
                             }}</span>
-
                             <span
                                 v-if="evt.finalDate"
-                                class="tw:bg-primary/10 tw:text-primary tw:border tw:border-primary/30 tw:text-[10px] tw:px-2 tw:py-1 tw:rounded-full tw:font-bold tw:whitespace-nowrap"
-                            >
-                                已定案
-                            </span>
-
-                            <span
-                                v-else
                                 class="tw:bg-accent/10 tw:text-accent tw:border tw:border-accent/30 tw:text-[10px] tw:px-2 tw:py-1 tw:rounded-full tw:font-bold tw:whitespace-nowrap"
                             >
-                                選擇中
+                                🎉 已定案
+                            </span>
+                            <span
+                                v-else
+                                class="tw:bg-primary/10 tw:text-primary tw:border tw:border-primary/30 tw:text-[10px] tw:px-2 tw:py-1 tw:rounded-full tw:font-bold tw:whitespace-nowrap"
+                            >
+                                🗓️ 選擇中
                             </span>
                         </div>
 
@@ -247,7 +348,7 @@ onMounted(async () => {
 
                                 <div
                                     v-if="evt.finalDate"
-                                    class="tw:font-bold tw:text-orange-600 tw:flex tw:items-center tw:gap-1"
+                                    class="tw:font-bold tw:text-accent tw:flex tw:items-center tw:gap-1"
                                 >
                                     <svg
                                         class="tw:w-4 tw:h-4"
@@ -262,11 +363,11 @@ onMounted(async () => {
                                             stroke-linejoin="round"
                                         />
                                     </svg>
-                                    <span>
-                                        決定日期：{{
+                                    <span
+                                        >決定日期：{{
                                             evt.finalDate.replace(/-/g, " / ")
-                                        }}
-                                    </span>
+                                        }}</span
+                                    >
                                 </div>
                                 <div
                                     v-else
@@ -285,10 +386,12 @@ onMounted(async () => {
                                             stroke-linejoin="round"
                                         />
                                     </svg>
-                                    <span>
-                                        開放區間：{{ evt.targetMonths.length }}
-                                        個月
-                                    </span>
+                                    <span
+                                        >開放區間：{{
+                                            evt.targetMonths.length
+                                        }}
+                                        個月</span
+                                    >
                                 </div>
                             </div>
 
@@ -371,7 +474,87 @@ onMounted(async () => {
                 </div>
             </div>
         </div>
-    </div>
 
-    <div v-else class="tw:text-center tw:mt-20 tw:text-gray-400">載入中...</div>
+        <div
+            v-if="showInviteModal"
+            class="tw:fixed tw:inset-0 tw:bg-black/50 tw:z-[100] tw:flex tw:items-end tw:justify-center tw:animate-fade-in"
+            @click.self="showInviteModal = false"
+        >
+            <div
+                class="tw:bg-white tw:w-full tw:max-w-md tw:rounded-t-3xl tw:p-6 tw:shadow-xl tw:animate-slide-up"
+            >
+                <div
+                    class="tw:w-12 tw:h-1.5 tw:bg-gray-200 tw:rounded-full tw:mx-auto tw:mb-6"
+                ></div>
+                <h2
+                    class="tw:text-xl tw:font-bold tw:text-gray-800 tw:mb-4 tw:text-center"
+                >
+                    邀請朋友加入群組
+                </h2>
+
+                <div class="tw:space-y-3">
+                    <button
+                        @click="shareToLine"
+                        class="tw:w-full tw:flex tw:items-center tw:justify-center tw:gap-2 tw:bg-[#06C755] tw:text-white tw:py-3.5 tw:rounded-xl tw:font-bold tw:shadow-md active:tw:scale-95 tw:transition"
+                    >
+                        <svg
+                            class="tw:w-5 tw:h-5"
+                            fill="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                d="M24 10.3c0-5.7-5.4-10.3-12-10.3S0 4.6 0 10.3c0 5.1 4.3 9.4 10.1 10.2.4.1.9.3 1 .7l.3 1.9c0 .1.1.2.2.2.1 0 .2 0 .2-.1.9-.6 5-3.3 7.5-5.5 2.9-2.3 4.7-5 4.7-7.4z"
+                            />
+                        </svg>
+                        傳送 LINE 邀請卡片
+                    </button>
+
+                    <button
+                        @click="copyInviteLink"
+                        class="tw:w-full tw:flex tw:items-center tw:justify-center tw:gap-2 tw:bg-gray-100 tw:text-gray-700 tw:py-3.5 tw:rounded-xl tw:font-bold active:tw:scale-95 tw:transition"
+                    >
+                        <svg
+                            class="tw:w-5 tw:h-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke-width="2"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75"
+                            />
+                        </svg>
+                        複製連結
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </template>
+
+<style scoped>
+.tw\:animate-fade-in {
+    animation: fadeIn 0.2s ease-out;
+}
+.tw\:animate-slide-up {
+    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+@keyframes slideUp {
+    from {
+        transform: translateY(100%);
+    }
+    to {
+        transform: translateY(0);
+    }
+}
+</style>

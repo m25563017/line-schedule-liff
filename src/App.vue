@@ -4,8 +4,8 @@ import liff from "@line/liff";
 import { useRouter, useRoute } from "vue-router";
 
 const profile = ref(null);
-const isLiffReady = ref(false); // 是否準備好 (成功)
-const errorMessage = ref(""); // 錯誤訊息 (如果有值代表出錯了)
+const isLiffReady = ref(false);
+const errorMessage = ref("");
 const router = useRouter();
 const route = useRoute();
 
@@ -25,11 +25,11 @@ onMounted(async () => {
 
                 if (!errorMessage.value) {
                     profile.value = {
-                        userId: "test_user_001",
-                        displayName: "開發者小明",
+                        userId: "test123",
+                        displayName: "豆奶",
                         pictureUrl:
                             "https://via.placeholder.com/150/06C755/FFFFFF?text=Dev",
-                        statusMessage: "測試中...",
+                        // statusMessage: "測試中...",
                     };
                     isLiffReady.value = true;
                 }
@@ -78,7 +78,13 @@ onMounted(async () => {
                     stroke="currentColor"
                     stroke-width="1.8"
                 >
-                    <circle cx="12" cy="12" r="9" class="tw:text-gray-300" fill="currentColor" />
+                    <circle
+                        cx="12"
+                        cy="12"
+                        r="9"
+                        class="tw:text-gray-300"
+                        fill="currentColor"
+                    />
                     <path
                         d="M9 9l-1.5-1.5M9 7.5L7.5 9M15 9l1.5-1.5M15 7.5L16.5 9"
                         stroke="#fff"
