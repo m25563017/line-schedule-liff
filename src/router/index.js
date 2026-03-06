@@ -6,6 +6,7 @@ import CreateEvent from "../views/CreateEvent.vue";
 import EventDetail from "../views/EventDetail.vue";
 import EditGroup from "../views/EditGroup.vue";
 import JoinGroup from "../views/JoinGroup.vue";
+import EditEvent from "../views/EditEvent.vue";
 
 const routes = [
     { path: "/", redirect: "/list" },
@@ -44,6 +45,12 @@ const routes = [
         path: "/group/:id/event/:eventId",
         name: "EventDetail",
         component: EventDetail,
+    },
+
+    {
+        path: "/group/:id/event/:eventId/edit",
+        name: "EditEvent",
+        component: EditEvent,
     },
 
     //防呆

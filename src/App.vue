@@ -25,11 +25,11 @@ onMounted(async () => {
 
                 if (!errorMessage.value) {
                     profile.value = {
-                        userId: "test123",
-                        displayName: "豆奶",
+                        userId: "test_user_001",
+                        displayName: "開發者小明",
                         pictureUrl:
                             "https://via.placeholder.com/150/06C755/FFFFFF?text=Dev",
-                        // statusMessage: "測試中...",
+                        statusMessage: "測試中...",
                     };
                     isLiffReady.value = true;
                 }
