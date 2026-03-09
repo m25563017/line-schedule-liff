@@ -2,10 +2,11 @@
 import { ref, inject, onMounted, computed, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { db } from "../utils/firebase";
-import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { useNotify } from "@pieda/core";
 import EventCalendar from "../components/EventCalendar.vue";
 import EventStats from "../components/EventStats.vue";
+import DecideModal from "../components/DecideModal.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -23,12 +24,11 @@ const availabilities = ref({});
 const selectedUserId = ref("");
 const tempDates = ref([]);
 const focusedDate = ref(null);
-const isDeleting = ref(false);
 
 const colorPalette = [
-    "tw:bg-primary", // 綠
-    "tw:bg-accent", // 橘
-    "tw:bg-secondary", // 藍
+    "tw:bg-primary",
+    "tw:bg-accent",
+    "tw:bg-secondary",
     "tw:bg-rose-400",
     "tw:bg-purple-400",
     "tw:bg-teal-400",
@@ -90,11 +90,14 @@ const respondedUsers = computed(() =>
         .filter((uid) => (availabilities.value[uid] || []).length > 0)
         .map((uid) => memberMap.value[uid]),
 );
+
+// 🌟 未填寫名單 (待會防呆會用到)
 const pendingUsers = computed(() =>
     Object.keys(memberMap.value)
         .filter((uid) => !(availabilities.value[uid] || []).length > 0)
         .map((uid) => memberMap.value[uid]),
 );
+
 const topDates = computed(() => {
     const counts = {};
     Object.values(availabilities.value).forEach((dates) =>
@@ -150,6 +153,7 @@ const isSelectedByMe = (dateStr) =>
           : (availabilities.value[userProfile.value?.userId] || []).includes(
                 dateStr,
             );
+
 const getAvailableUsersForDate = (dateStr) => {
     const users = [];
     Object.keys(memberMap.value).forEach((uid) => {
@@ -166,24 +170,53 @@ const getAvailableUsersForDate = (dateStr) => {
 // --- 定案與儲存邏輯 ---
 const isFinalized = computed(() => !!event.value?.finalDate);
 const showDecideModal = ref(false);
-const finalDateInput = ref("");
 const isFinalizing = ref(false);
+
 const openDecideModal = () => {
     if (topDates.value.length > 0)
         finalDateInput.value = topDates.value[0].date;
     showDecideModal.value = true;
 };
-const confirmFinalDate = async () => {
-    if (!finalDateInput.value) return alert("請選擇一個日期！");
+
+// 🚀 新增：點擊「決定日期」時的防呆檢查
+const handleDecideClick = () => {
+    if (pendingUsers.value.length > 0) {
+        const names = pendingUsers.value.map((u) => u.displayName).join("、");
+
+        $notify
+            .alert({
+                title: "系統通知",
+                message: `還有成員尚未填寫喔！\n\n未填寫名單：${names}\n\n確定要現在就決定日子嗎？`,
+                variant: "warning",
+                confirm: true,
+            })
+            .then((result) => {
+                if (result.isConfirmed) {
+                    // 主揪說沒關係，強制決定
+                    openDecideModal();
+                }
+            });
+    } else {
+        // 大家都填完了，直接打開定案視窗
+        openDecideModal();
+    }
+};
+
+// selectedDate
+const confirmFinalDate = async (selectedDate) => {
     isFinalizing.value = true;
     try {
         await updateDoc(doc(db, "groups", groupId, "events", eventId), {
-            finalDate: finalDateInput.value,
+            finalDate: selectedDate,
         });
-        event.value.finalDate = finalDateInput.value;
+        event.value.finalDate = selectedDate;
         showDecideModal.value = false;
     } catch (e) {
-        alert("設定失敗");
+        $notify.alert({
+            title: "系統通知",
+            message: "發生錯誤，請稍後再試",
+            variant: "error",
+        });
     } finally {
         isFinalizing.value = false;
     }
@@ -204,41 +237,6 @@ const saveChanges = async () => {
     } finally {
         isSaving.value = false;
     }
-};
-
-// 刪除活動
-const handleDeleteEvent = () => {
-    $notify
-        .alert({
-            title: "系統通知",
-            message: "確定要刪除此活動嗎？成員的填寫紀錄將無法復原！",
-            variant: "question",
-            confirm: true,
-        })
-        .then(async (result) => {
-            if (!result.isConfirmed) return; // 使用者按取消，不做任何事
-
-            isDeleting.value = true;
-            try {
-                const eventRef = doc(db, "groups", groupId, "events", eventId);
-                await deleteDoc(eventRef);
-                $notify.alert({
-                    title: "系統通知",
-                    message: "活動已成功刪除",
-                    variant: "success",
-                });
-                router.push(`/group/${groupId}`); // 刪除成功後跳回群組首頁
-            } catch (e) {
-                console.error("刪除失敗", e);
-                $notify.alert({
-                    title: "系統通知",
-                    message: "刪除失敗，請稍後再試。",
-                    variant: "error",
-                });
-            } finally {
-                isDeleting.value = false;
-            }
-        });
 };
 </script>
 
@@ -294,6 +292,7 @@ const handleDeleteEvent = () => {
             <h1 class="tw:text-lg tw:font-bold tw:text-gray-800">
                 {{ isEditing ? "選擇日期" : event.title }}
             </h1>
+
             <router-link
                 v-if="isCurrentUserAdmin && !isEditing"
                 :to="`/group/${groupId}/event/${eventId}/edit`"
@@ -329,7 +328,7 @@ const handleDeleteEvent = () => {
                 class="tw:bg-accent tw:text-white tw:p-4 tw:rounded-xl tw:shadow-md tw:mb-4 tw:text-center tw:animate-fade-in"
             >
                 <svg
-                    class="tw:w-6 tw:h-6"
+                    class="tw:w-6 tw:h-6 tw:mx-auto tw:mb-1"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke-width="2"
@@ -406,13 +405,13 @@ const handleDeleteEvent = () => {
 
             <div
                 v-if="focusedDate && !isFinalized"
-                class="tw:bg-blue-50 tw:border tw:border-blue-100 tw:rounded-xl tw:p-4 tw:animate-fade-in tw:mb-4"
+                class="tw:bg-blue-50 tw:border tw:border-blue-100 tw:rounded-xl tw:p-4 tw:animate-fade-in tw:mb-4 tw:mt-4"
             >
                 <h4
                     class="tw:font-bold tw:text-blue-800 tw:text-sm tw:mb-2 border-b tw:border-blue-200 tw:pb-1"
                 >
                     <svg
-                        class="tw:w-5 tw:h-5"
+                        class="tw:w-5 tw:h-5 tw:inline tw:-mt-0.5"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke-width="2.5"
@@ -446,6 +445,7 @@ const handleDeleteEvent = () => {
 
             <EventStats
                 v-if="!isEditing && !isFinalized"
+                class="tw:mt-4"
                 :topDates="topDates"
                 :respondedUsers="respondedUsers"
                 :pendingUsers="pendingUsers"
@@ -478,13 +478,14 @@ const handleDeleteEvent = () => {
                 </div>
             </button>
         </div>
+
         <div
             v-else-if="!isEditing && !isFinalized"
             class="tw:fixed tw:bottom-0 tw:left-0 tw:w-full tw:bg-white tw:border-t tw:shadow-lg tw:p-4 tw:flex tw:gap-3 tw:z-50 tw:animate-slide-up"
         >
             <button
                 v-if="isCurrentUserAdmin"
-                @click="openDecideModal"
+                @click="handleDecideClick"
                 class="tw:flex-1 tw:bg-accent tw:text-white tw:py-3.5 tw:rounded-xl tw:font-bold tw:shadow-md active:tw:scale-95 tw:transition"
             >
                 <span class="tw:inline-flex tw:items-center tw:gap-1">
@@ -526,6 +527,7 @@ const handleDeleteEvent = () => {
                 </span>
             </button>
         </div>
+
         <div
             v-else
             class="tw:fixed tw:bottom-0 tw:left-0 tw:w-full tw:bg-white tw:border-t tw:shadow-lg tw:p-4 tw:flex tw:gap-3 tw:z-50 tw:animate-slide-up"
@@ -546,41 +548,13 @@ const handleDeleteEvent = () => {
             </button>
         </div>
 
-        <div
-            v-if="showDecideModal"
-            class="tw:fixed tw:inset-0 tw:bg-black/50 tw:z-[100] tw:flex tw:items-center tw:justify-center tw:p-4 tw:animate-fade-in"
-        >
-            <div
-                class="tw:bg-white tw:rounded-2xl tw:w-full tw:max-w-sm tw:p-6 tw:shadow-xl tw:animate-slide-up"
-            >
-                <h2 class="tw:text-xl tw:font-bold tw:text-gray-800 tw:mb-2">
-                    拍板定案！
-                </h2>
-                <p class="tw:text-sm tw:text-gray-500 tw:mb-6">
-                    決定後，成員將無法再更改自己的空擋。請選擇最終的活動日期：
-                </p>
-                <input
-                    v-model="finalDateInput"
-                    type="date"
-                    class="tw:w-full tw:p-3 tw:border tw:border-gray-300 tw:rounded-lg tw:outline-none focus:tw:ring-2 focus:tw:ring-orange-500 tw:mb-6"
-                />
-                <div class="tw:flex tw:gap-3">
-                    <button
-                        @click="showDecideModal = false"
-                        class="tw:flex-1 tw:bg-gray-100 tw:text-gray-700 tw:py-3 tw:rounded-xl tw:font-bold"
-                    >
-                        取消
-                    </button>
-                    <button
-                        @click="confirmFinalDate"
-                        :disabled="isFinalizing"
-                        class="tw:flex-1 tw:bg-orange-500 tw:text-white tw:py-3 tw:rounded-xl tw:font-bold tw:shadow-md"
-                    >
-                        {{ isFinalizing ? "處理中..." : "確認定案" }}
-                    </button>
-                </div>
-            </div>
-        </div>
+        <DecideModal
+            :show="showDecideModal"
+            :topDates="topDates"
+            :isFinalizing="isFinalizing"
+            @close="showDecideModal = false"
+            @confirm="confirmFinalDate"
+        />
     </div>
 </template>
 

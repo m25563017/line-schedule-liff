@@ -12,6 +12,10 @@ import {
 } from "firebase/firestore";
 import { useNotify } from "@pieda/core";
 
+import InviteModal from "../components/InviteModal.vue";
+import EventCard from "../components/EventCard.vue";
+import MemberListItem from "../components/MemberListItem.vue";
+
 const route = useRoute();
 const groupId = route.params.id;
 const userProfile = inject("userProfile");
@@ -19,118 +23,15 @@ const group = ref(null);
 const events = ref([]);
 const loading = ref(true);
 
-// 初始化 notify 套件
 const $notify = useNotify();
 
-// 🔗 邀請選單狀態
+// 控制 InviteModal 是否顯示
 const showInviteModal = ref(false);
 
-// 產生專屬邀請網址
+// 產生專屬邀請網址 (給 InviteModal 用)
 const inviteLink = computed(() => {
     return `${window.location.origin}/#/group/${groupId}/join`;
 });
-
-// 1. 複製純文字連結
-const copyInviteLink = async () => {
-    try {
-        await navigator.clipboard.writeText(inviteLink.value);
-        $notify.alert({
-            title: "系統通知",
-            message: "邀請連結已複製！快去貼給 LINE 的朋友吧！",
-            variant: "success",
-        });
-        showInviteModal.value = false;
-    } catch (err) {
-        $notify.alert({
-            title: "請手動複製",
-            message:
-                "您的裝置不支援自動複製，請手動複製以下連結：\n\n" +
-                inviteLink.value,
-            variant: "warning",
-        });
-    }
-};
-
-// Flex Message
-const shareToLine = async () => {
-    if (window.liff && window.liff.isApiAvailable("shareTargetPicker")) {
-        try {
-            await window.liff.shareTargetPicker([
-                {
-                    type: "flex",
-                    altText: `邀請您加入 ${group.value.name}`,
-                    contents: {
-                        type: "bubble",
-                        hero: {
-                            type: "image",
-                            url:
-                                group.value.coverUrl ||
-                                "https://via.placeholder.com/800x400/508974/FFFFFF?text=Join+Group",
-                            size: "full",
-                            aspectRatio: "20:13",
-                            aspectMode: "cover",
-                        },
-                        body: {
-                            type: "box",
-                            layout: "vertical",
-                            contents: [
-                                {
-                                    type: "text",
-                                    text: group.value.name,
-                                    weight: "bold",
-                                    size: "xl",
-                                },
-                                {
-                                    type: "text",
-                                    text: "趕緊加入群組來快速排行程，將下面連結設成群組公告更加方便！",
-                                    wrap: true,
-                                    color: "#666666",
-                                    size: "sm",
-                                    margin: "md",
-                                },
-                            ],
-                        },
-                        footer: {
-                            type: "box",
-                            layout: "vertical",
-                            spacing: "sm",
-                            contents: [
-                                {
-                                    type: "button",
-                                    style: "primary",
-                                    color: "#508974",
-                                    height: "sm",
-                                    action: {
-                                        type: "uri",
-                                        label: "加入群組",
-                                        uri: inviteLink.value,
-                                    },
-                                },
-                            ],
-                            flex: 0,
-                        },
-                    },
-                },
-            ]);
-            showInviteModal.value = false;
-        } catch (error) {
-            console.error("分享失敗", error);
-            fallbackShare();
-        }
-    } else {
-        fallbackShare();
-    }
-};
-
-// 降級純文字分享 (開啟 LINE 分享連結)
-const fallbackShare = () => {
-    const text = `邀請你加入「${group.value.name}」！快點擊連結加入吧：`;
-
-    const lineShareUrl = `https://lineit.line.me/share/ui?text=${encodeURIComponent(text)}&url=${encodeURIComponent(inviteLink.value)}`;
-
-    window.open(lineShareUrl, "_blank");
-    showInviteModal.value = false;
-};
 
 onMounted(async () => {
     try {
@@ -181,7 +82,7 @@ onMounted(async () => {
             />
             <div
                 v-else
-                class="tw:w-full tw:h-full tw:bg-linear-to-br tw:from-primary tw:to-secondary"
+                class="tw:w-full tw:h-full tw:bg-gradient-to-br tw:from-primary tw:to-secondary"
             ></div>
 
             <router-link
@@ -225,7 +126,7 @@ onMounted(async () => {
             </router-link>
 
             <div
-                class="tw:absolute tw:bottom-0 tw:left-0 tw:w-full tw:bg-linear-to-t tw:from-black/60 tw:to-transparent tw:p-4 tw:pt-10"
+                class="tw:absolute tw:bottom-0 tw:left-0 tw:w-full tw:bg-gradient-to-t tw:from-black/60 tw:to-transparent tw:p-4 tw:pt-10"
             >
                 <h1 class="tw:text-2xl tw:font-bold tw:text-white">
                     {{ group.name }}
@@ -256,7 +157,6 @@ onMounted(async () => {
                     </svg>
                     <span>發起活動</span>
                 </router-link>
-
                 <button
                     @click="showInviteModal = true"
                     class="tw:bg-gray-100 tw:text-gray-700 tw:p-3 tw:rounded-lg tw:font-bold tw:flex tw:flex-col tw:items-center tw:gap-1 active:tw:scale-95 tw:transition"
@@ -289,131 +189,20 @@ onMounted(async () => {
                 >
                     活動列表
                 </h3>
-
                 <div
                     v-if="events.length === 0"
                     class="tw:text-center tw:text-gray-400 tw:py-4 tw:text-sm"
                 >
                     還沒有發起任何活動
                 </div>
-
                 <div v-else class="tw:space-y-3">
-                    <router-link
+                    <EventCard
                         v-for="evt in events"
                         :key="evt.id"
-                        :to="`/group/${groupId}/event/${evt.id}`"
-                        class="tw:block tw:border tw:border-gray-100 tw:p-3 tw:rounded-lg hover:tw:bg-gray-50 tw:transition active:tw:scale-[0.98]"
-                    >
-                        <div
-                            class="tw:flex tw:justify-between tw:items-start tw:mb-2"
-                        >
-                            <span class="tw:font-bold tw:text-gray-800">{{
-                                evt.title
-                            }}</span>
-                            <span
-                                v-if="evt.finalDate"
-                                class="tw:bg-accent/10 tw:text-accent tw:border tw:border-accent/30 tw:text-[10px] tw:px-2 tw:py-1 tw:rounded-full tw:font-bold tw:whitespace-nowrap"
-                            >
-                                🎉 已定案
-                            </span>
-                            <span
-                                v-else
-                                class="tw:bg-primary/10 tw:text-primary tw:border tw:border-primary/30 tw:text-[10px] tw:px-2 tw:py-1 tw:rounded-full tw:font-bold tw:whitespace-nowrap"
-                            >
-                                🗓️ 選擇中
-                            </span>
-                        </div>
-
-                        <div class="tw:flex tw:justify-between tw:items-end">
-                            <div
-                                class="tw:text-xs tw:text-gray-500 tw:space-y-1.5"
-                            >
-                                <div class="tw:flex tw:items-center tw:gap-1.5">
-                                    <img
-                                        :src="
-                                            group.members[evt.createdBy]
-                                                ?.pictureUrl ||
-                                            'https://via.placeholder.com/40'
-                                        "
-                                        class="tw:w-4 tw:h-4 tw:rounded-full tw:object-cover tw:border tw:border-gray-200"
-                                    />
-                                    <span
-                                        >{{
-                                            group.members[evt.createdBy]
-                                                ?.displayName || "未知成員"
-                                        }}
-                                        發起</span
-                                    >
-                                </div>
-
-                                <div
-                                    v-if="evt.finalDate"
-                                    class="tw:font-bold tw:text-accent tw:flex tw:items-center tw:gap-1"
-                                >
-                                    <svg
-                                        class="tw:w-4 tw:h-4"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        stroke-width="2"
-                                    >
-                                        <path
-                                            d="M7 3h5a3 3 0 013 3v12l-3-2-3 2V6a3 3 0 00-3-3z"
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                        />
-                                    </svg>
-                                    <span
-                                        >決定日期：{{
-                                            evt.finalDate.replace(/-/g, " / ")
-                                        }}</span
-                                    >
-                                </div>
-                                <div
-                                    v-else
-                                    class="tw:flex tw:items-center tw:gap-1"
-                                >
-                                    <svg
-                                        class="tw:w-4 tw:h-4"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        stroke-width="2"
-                                    >
-                                        <path
-                                            d="M8 3h8v2.5L13 12l3 6.5V21H8v-2.5L11 12 8 5.5V3z"
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                        />
-                                    </svg>
-                                    <span
-                                        >開放區間：{{
-                                            evt.targetMonths.length
-                                        }}
-                                        個月</span
-                                    >
-                                </div>
-                            </div>
-
-                            <span
-                                class="tw:text-gray-300 tw:text-sm tw:mb-1 tw:flex tw:items-center"
-                            >
-                                <svg
-                                    class="tw:w-3 tw:h-3"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="2"
-                                >
-                                    <path
-                                        d="M9 5l7 7-7 7"
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                    />
-                                </svg>
-                            </span>
-                        </div>
-                    </router-link>
+                        :event="evt"
+                        :members="group.members"
+                        :groupId="groupId"
+                    />
                 </div>
             </div>
 
@@ -426,135 +215,22 @@ onMounted(async () => {
                         >{{ Object.keys(group.members || {}).length }} 人</span
                     >
                 </div>
-
                 <div class="tw:space-y-3">
-                    <div
+                    <MemberListItem
                         v-for="(member, uid) in group.members"
                         :key="uid"
-                        class="tw:flex tw:items-center tw:gap-3"
-                    >
-                        <div
-                            class="tw:w-10 tw:h-10 tw:rounded-full tw:bg-gray-200 tw:animate-pulse tw:relative tw:overflow-hidden tw:shrink-0 tw:border tw:border-gray-200"
-                        >
-                            <img
-                                :src="
-                                    member.pictureUrl ||
-                                    'https://via.placeholder.com/40?text=V'
-                                "
-                                class="tw:absolute tw:inset-0 tw:w-full tw:h-full tw:object-cover tw:opacity-0 tw:transition-opacity tw:duration-300"
-                                @load="
-                                    $event.target.classList.remove(
-                                        'tw:opacity-0',
-                                    );
-                                    $event.target.parentElement.classList.remove(
-                                        'tw:animate-pulse',
-                                    );
-                                "
-                            />
-                        </div>
-                        <div class="tw:flex-1">
-                            <div class="tw:flex tw:items-center tw:gap-2">
-                                <span
-                                    class="tw:text-sm tw:font-bold tw:text-gray-800"
-                                    >{{ member.displayName }}</span
-                                >
-                                <span
-                                    v-if="member.role === 'admin'"
-                                    class="tw:text-[10px] tw:bg-yellow-100 tw:text-yellow-700 tw:px-1.5 tw:rounded"
-                                    >建立者</span
-                                >
-                                <span
-                                    v-if="member.isVirtual"
-                                    class="tw:text-[10px] tw:bg-gray-100 tw:text-gray-500 tw:px-1.5 tw:rounded"
-                                    >虛擬</span
-                                >
-                            </div>
-                        </div>
-                    </div>
+                        :member="member"
+                    />
                 </div>
             </div>
         </div>
 
-        <div
-            v-if="showInviteModal"
-            class="tw:fixed tw:inset-0 tw:bg-black/50 tw:z-[100] tw:flex tw:items-end tw:justify-center tw:animate-fade-in"
-            @click.self="showInviteModal = false"
-        >
-            <div
-                class="tw:bg-white tw:w-full tw:max-w-md tw:rounded-t-3xl tw:p-6 tw:shadow-xl tw:animate-slide-up"
-            >
-                <div
-                    class="tw:w-12 tw:h-1.5 tw:bg-gray-200 tw:rounded-full tw:mx-auto tw:mb-6"
-                ></div>
-                <h2
-                    class="tw:text-xl tw:font-bold tw:text-gray-800 tw:mb-4 tw:text-center"
-                >
-                    邀請朋友加入群組
-                </h2>
-
-                <div class="tw:space-y-3">
-                    <button
-                        @click="shareToLine"
-                        class="tw:w-full tw:flex tw:items-center tw:justify-center tw:gap-2 tw:bg-[#06C755] tw:text-white tw:py-3.5 tw:rounded-xl tw:font-bold tw:shadow-md active:tw:scale-95 tw:transition"
-                    >
-                        <svg
-                            class="tw:w-5 tw:h-5"
-                            fill="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-                            <path
-                                d="M24 10.3c0-5.7-5.4-10.3-12-10.3S0 4.6 0 10.3c0 5.1 4.3 9.4 10.1 10.2.4.1.9.3 1 .7l.3 1.9c0 .1.1.2.2.2.1 0 .2 0 .2-.1.9-.6 5-3.3 7.5-5.5 2.9-2.3 4.7-5 4.7-7.4z"
-                            />
-                        </svg>
-                        傳送 LINE 邀請卡片
-                    </button>
-
-                    <button
-                        @click="copyInviteLink"
-                        class="tw:w-full tw:flex tw:items-center tw:justify-center tw:gap-2 tw:bg-gray-100 tw:text-gray-700 tw:py-3.5 tw:rounded-xl tw:font-bold active:tw:scale-95 tw:transition"
-                    >
-                        <svg
-                            class="tw:w-5 tw:h-5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke-width="2"
-                            stroke="currentColor"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75"
-                            />
-                        </svg>
-                        複製連結
-                    </button>
-                </div>
-            </div>
-        </div>
+        <InviteModal
+            :show="showInviteModal"
+            :groupName="group.name"
+            :inviteLink="inviteLink"
+            :coverUrl="group.coverUrl"
+            @close="showInviteModal = false"
+        />
     </div>
 </template>
-
-<style scoped>
-.tw\:animate-fade-in {
-    animation: fadeIn 0.2s ease-out;
-}
-.tw\:animate-slide-up {
-    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
-}
-@keyframes slideUp {
-    from {
-        transform: translateY(100%);
-    }
-    to {
-        transform: translateY(0);
-    }
-}
-</style>

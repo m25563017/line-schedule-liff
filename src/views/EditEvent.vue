@@ -156,10 +156,10 @@ const updateEvent = async () => {
 const handleDeleteEvent = () => {
     $notify
         .alert({
-            title: "危險操作",
+            title: "系統通知",
             message:
                 "確定要刪除此活動嗎？\n刪除後所有成員的填寫紀錄將無法復原！",
-            variant: "error",
+            variant: "question",
             confirm: true,
         })
         .then(async (result) => {
@@ -302,9 +302,6 @@ const handleDeleteEvent = () => {
             <div
                 class="tw:bg-white tw:border tw:border-red-100 tw:rounded-xl tw:p-5"
             >
-                <h3 class="tw:text-red-500 tw:font-bold tw:mb-2 tw:text-sm">
-                    危險操作
-                </h3>
                 <p class="tw:text-xs tw:text-gray-500 tw:mb-4">
                     刪除後無法復原，所有成員的月曆紀錄將會消失。
                 </p>

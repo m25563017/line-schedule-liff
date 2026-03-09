@@ -22,22 +22,26 @@ defineEmits(["prev", "next", "date-click"]);
             class="tw:flex tw:justify-between tw:items-center tw:p-4 tw:bg-gray-50 tw:border-b"
         >
             <button
+                v-if="monthIndex > 0"
                 @click="$emit('prev')"
-                :disabled="monthIndex === 0"
-                class="tw:px-3 tw:text-gray-500 disabled:tw:opacity-30 tw:font-bold tw:text-xl"
+                class="tw:p-2 tw:text-gray-400 hover:tw:text-gray-700"
             >
                 &lt;
             </button>
-            <span class="tw:font-bold tw:text-lg tw:text-gray-800">
-                {{ months[monthIndex].replace("-", " 年 ") }} 月
-            </span>
+            <div v-else class="tw:w-8"></div>
+
+            <span class="tw:font-bold"
+                >{{ months[monthIndex].replace("-", " 年 ") }} 月</span
+            >
+
             <button
+                v-if="monthIndex < months.length - 1"
                 @click="$emit('next')"
-                :disabled="monthIndex === months.length - 1"
-                class="tw:px-3 tw:text-gray-500 disabled:tw:opacity-30 tw:font-bold tw:text-xl"
+                class="tw:p-2 tw:text-gray-400 hover:tw:text-gray-700"
             >
                 &gt;
             </button>
+            <div v-else class="tw:w-8"></div>
         </div>
 
         <div
