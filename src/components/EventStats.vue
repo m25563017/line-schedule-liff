@@ -1,20 +1,21 @@
 <script setup>
-// 定義接收外部傳來的資料
 defineProps({
-    topDates: Array,
-    respondedUsers: Array,
-    pendingUsers: Array,
+    topDates: { type: Array, default: () => [] },
+    respondedUsers: { type: Array, default: () => [] },
+    pendingUsers: { type: Array, default: () => [] },
 });
 </script>
 
 <template>
-    <div class="tw:space-y-4 tw:mb-4">
-        <div class="tw:bg-white tw:rounded-xl tw:shadow-sm tw:border tw:p-4">
+    <div class="tw:space-y-4">
+        <div
+            class="tw:bg-white tw:border tw:border-gray-200 tw:rounded-xl tw:p-4"
+        >
             <h3
-                class="tw:font-bold tw:text-gray-800 tw:flex tw:items-center tw:gap-2 tw:mb-3"
+                class="tw:flex tw:items-center tw:gap-2 tw:font-bold tw:text-gray-800 tw:text-lg tw:mb-4"
             >
                 <svg
-                    class="tw:w-6 tw:h-6"
+                    class="tw:w-5 tw:h-5"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke-width="2"
@@ -23,67 +24,71 @@ defineProps({
                     <path
                         stroke-linecap="round"
                         stroke-linejoin="round"
-                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                        d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
                     />
                 </svg>
-                <span>最多人有空的日期</span>
+                最多人有空的日期
             </h3>
+
             <div
                 v-if="topDates.length === 0"
-                class="tw:text-sm tw:text-gray-400 tw:text-center tw:py-2"
+                class="tw:text-center tw:text-gray-400 tw:py-4 tw:text-sm"
             >
                 目前還沒有人選擇
             </div>
+
             <div v-else class="tw:space-y-2">
                 <div
-                    v-for="(item, idx) in topDates"
-                    :key="idx"
-                    class="tw:flex tw:justify-between tw:items-center tw:bg-orange-50 tw:p-3 tw:rounded-lg tw:border tw:border-orange-100"
+                    v-for="(item, index) in topDates"
+                    :key="index"
+                    class="tw:flex tw:justify-between tw:items-center tw:bg-orange-50 tw:px-4 tw:py-3 tw:rounded-lg tw:border tw:border-orange-100"
                 >
-                    <span class="tw:font-bold tw:text-orange-800 tw:text-sm">{{
+                    <span class="tw:font-bold tw:text-orange-800">{{
                         item.date.replace(/-/g, " / ")
                     }}</span>
                     <span
-                        class="tw:text-xs tw:bg-orange-500 tw:text-white tw:px-2 tw:py-1 tw:rounded-full tw:font-bold"
-                        >{{ item.count }} 人</span
+                        class="tw:bg-orange-500 tw:text-white tw:text-xs tw:font-bold tw:px-3 tw:py-1 tw:rounded-full"
                     >
+                        {{ item.count }} 人
+                    </span>
                 </div>
             </div>
         </div>
 
-        <div class="tw:bg-white tw:rounded-xl tw:shadow-sm tw:border tw:p-4">
-            <h3 class="tw:font-bold tw:text-gray-800 tw:mb-3 border-b tw:pb-2">
+        <div
+            class="tw:bg-white tw:border tw:border-gray-200 tw:rounded-xl tw:p-4"
+        >
+            <h3 class="tw:font-bold tw:text-gray-800 tw:text-lg tw:mb-4">
                 填寫狀況
             </h3>
-            <div class="tw:mb-3">
-                <div class="tw:text-xs tw:text-green-600 tw:font-bold tw:mb-2">
+
+            <div class="tw:mb-4">
+                <h4 class="tw:text-sm tw:font-bold tw:text-primary tw:mb-2">
                     已填寫 ({{ respondedUsers.length }})
-                </div>
+                </h4>
                 <div class="tw:flex tw:flex-wrap tw:gap-2">
                     <span
-                        v-for="u in respondedUsers"
-                        :key="u.id"
-                        class="tw:flex tw:items-center tw:gap-1 tw:text-xs tw:bg-gray-100 tw:px-2 tw:py-1 tw:rounded-md tw:text-gray-700 border"
+                        v-for="user in respondedUsers"
+                        :key="user.id"
+                        class="tw:inline-flex tw:items-center tw:text-xs tw:font-medium tw:bg-gray-100 tw:text-gray-700 tw:px-2.5 tw:py-1.5 tw:rounded-lg"
                     >
-                        <div
-                            class="tw:w-2 tw:h-2 tw:rounded-full"
-                            :class="u.color"
-                        ></div>
-                        {{ u.displayName }}
+                        {{ user.displayName }}
                     </span>
                 </div>
             </div>
+
             <div>
-                <div class="tw:text-xs tw:text-gray-400 tw:font-bold tw:mb-2">
+                <h4 class="tw:text-sm tw:font-bold tw:text-gray-400 tw:mb-2">
                     尚未填寫 ({{ pendingUsers.length }})
-                </div>
+                </h4>
                 <div class="tw:flex tw:flex-wrap tw:gap-2">
                     <span
-                        v-for="u in pendingUsers"
-                        :key="u.id"
-                        class="tw:text-xs tw:text-gray-400"
-                        >{{ u.displayName }}</span
+                        v-for="user in pendingUsers"
+                        :key="user.id"
+                        class="tw:text-xs tw:font-medium tw:text-gray-500 tw:px-1"
                     >
+                        {{ user.displayName }}
+                    </span>
                 </div>
             </div>
         </div>

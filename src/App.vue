@@ -38,7 +38,7 @@ onMounted(async () => {
         }
 
         // 2. 正式環境 LIFF 初始化
-        await liff.init({ liffId: "你的_LIFF_ID" });
+        await liff.init({ liffId: "2008922865-iLv6kFaA" });
 
         // 處理路由 hash (解決 LIFF 轉址問題)
         const path = window.location.pathname;
@@ -123,24 +123,6 @@ onMounted(async () => {
         </div>
 
         <div v-else class="tw:flex-1 tw:flex tw:flex-col tw:overflow-hidden">
-            <header
-                v-if="profile"
-                class="tw:flex-none tw:bg-white tw:shadow-sm tw:p-3 tw:flex tw:items-center tw:gap-3 tw:z-10"
-            >
-                <img
-                    :src="profile.pictureUrl"
-                    class="tw:w-8 tw:h-8 tw:rounded-full tw:border"
-                />
-                <span class="tw:font-bold tw:text-gray-700">{{
-                    profile.displayName
-                }}</span>
-                <span
-                    v-if="isDev"
-                    class="tw:text-xs tw:bg-yellow-200 tw:text-yellow-800 tw:px-2 tw:py-0.5 tw:rounded"
-                    >DEV</span
-                >
-            </header>
-
             <main class="tw:flex-1 tw:overflow-y-auto tw:relative tw:w-full">
                 <router-view></router-view>
             </main>

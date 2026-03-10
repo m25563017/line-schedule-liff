@@ -71,6 +71,19 @@ onMounted(async () => {
 const handleFileChange = (event) => {
     const file = event.target.files[0];
     if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+        $notify.alert({
+            title: "檔案太大囉",
+            message: "群組封面圖片請勿超過 5MB！\n請壓縮後再重新上傳。",
+            variant: "warning",
+        });
+
+        event.target.value = "";
+        return;
+    }
+
+    // 如果檢查通過，就繼續原本的預覽流程
     groupImageFile.value = file;
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -419,9 +432,11 @@ const handleDeleteGroup = async () => {
             <button
                 @click="handleDeleteGroup"
                 :disabled="isSubmitting"
-                class="tw:w-full tw:bg-red-50 tw:text-red-600 tw:border tw:border-red-200 tw:py-3 tw:rounded-xl tw:font-bold tw:mb-6 active:tw:scale-95 tw:transition"
+                class="tw:w-full tw:bg-accent-50 tw:text-accent tw:border tw:border-accent tw:py-3 tw:rounded-xl tw:font-bold tw:mb-6 active:tw:scale-95 tw:transition"
             >
-                <div class="tw:flex tw:items-center tw:gap-2">
+                <div
+                    class="tw:flex tw:items-center tw:w-full tw:justify-center tw:gap-2"
+                >
                     <svg
                         class="tw:w-5 tw:h-5"
                         fill="none"

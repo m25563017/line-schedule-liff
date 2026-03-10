@@ -25,16 +25,6 @@ const selectedUserId = ref("");
 const tempDates = ref([]);
 const focusedDate = ref(null);
 
-const colorPalette = [
-    "tw:bg-primary",
-    "tw:bg-accent",
-    "tw:bg-secondary",
-    "tw:bg-rose-400",
-    "tw:bg-purple-400",
-    "tw:bg-teal-400",
-    "tw:bg-yellow-500",
-];
-
 onMounted(async () => {
     try {
         const groupSnap = await getDoc(doc(db, "groups", groupId));
@@ -64,8 +54,8 @@ watch(selectedUserId, (newId) => {
 const memberMap = computed(() => {
     if (!group.value) return {};
     const map = {};
-    Object.entries(group.value.members).forEach(([id, member], idx) => {
-        map[id] = { ...member, color: colorPalette[idx % colorPalette.length] };
+    Object.entries(group.value.members).forEach(([id, member]) => {
+        map[id] = { ...member };
     });
     return map;
 });
@@ -173,8 +163,6 @@ const showDecideModal = ref(false);
 const isFinalizing = ref(false);
 
 const openDecideModal = () => {
-    if (topDates.value.length > 0)
-        finalDateInput.value = topDates.value[0].date;
     showDecideModal.value = true;
 };
 
@@ -405,13 +393,13 @@ const saveChanges = async () => {
 
             <div
                 v-if="focusedDate && !isFinalized"
-                class="tw:bg-blue-50 tw:border tw:border-blue-100 tw:rounded-xl tw:p-4 tw:animate-fade-in tw:mb-4 tw:mt-4"
+                class="tw:bg-white tw:border tw:border-gray-200 tw:rounded-xl tw:p-4 tw:animate-fade-in tw:mb-4 tw:mt-4 tw:shadow-sm"
             >
                 <h4
-                    class="tw:font-bold tw:text-blue-800 tw:text-sm tw:mb-2 border-b tw:border-blue-200 tw:pb-1"
+                    class="tw:flex tw:items-center tw:gap-1.5 tw:font-bold tw:text-gray-700 tw:text-sm tw:mb-3 tw:border-b tw:border-gray-100 tw:pb-2"
                 >
                     <svg
-                        class="tw:w-5 tw:h-5 tw:inline tw:-mt-0.5"
+                        class="tw:w-4 tw:h-4 tw:text-primary"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke-width="2.5"
@@ -420,26 +408,29 @@ const saveChanges = async () => {
                         <path
                             stroke-linecap="round"
                             stroke-linejoin="round"
-                            d="M15.75 19.5 8.25 12l7.5-7.5"
+                            d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                         />
                     </svg>
-                    {{ focusedDate.replace(/-/g, "/") }} 可參加名單：
+                    {{ focusedDate.replace(/-/g, " / ") }} 可參加名單
                 </h4>
-                <div class="tw:flex tw:flex-wrap tw:gap-2 tw:mt-2">
+
+                <div class="tw:flex tw:flex-wrap tw:gap-2">
                     <span
                         v-if="
                             getAvailableUsersForDate(focusedDate).length === 0
                         "
-                        class="tw:text-xs tw:text-blue-400"
-                        >這天沒有人有空</span
+                        class="tw:text-xs tw:text-gray-400 tw:py-1"
                     >
+                        這天沒有人有空
+                    </span>
+
                     <span
                         v-for="u in getAvailableUsersForDate(focusedDate)"
                         :key="u.id"
-                        class="tw:text-xs tw:px-2 tw:py-1 tw:rounded-full tw:text-white tw:font-medium tw:shadow-sm"
-                        :class="u.color"
-                        >{{ u.displayName }}</span
+                        class="tw:inline-flex tw:items-center tw:text-xs tw:font-medium tw:bg-gray-100 tw:text-gray-700 tw:px-2.5 tw:py-1.5 tw:rounded-lg"
                     >
+                        {{ u.displayName }}
+                    </span>
                 </div>
             </div>
 
@@ -481,7 +472,7 @@ const saveChanges = async () => {
 
         <div
             v-else-if="!isEditing && !isFinalized"
-            class="tw:fixed tw:bottom-0 tw:left-0 tw:w-full tw:bg-white tw:border-t tw:shadow-lg tw:p-4 tw:flex tw:gap-3 tw:z-50 tw:animate-slide-up"
+            class="tw:fixed tw:bottom-0 tw:left-0 tw:w-full tw:bg-white tw:border-t tw:border-gray-200 tw:shadow-lg tw:p-4 tw:flex tw:gap-3 tw:z-50 tw:animate-slide-up"
         >
             <button
                 v-if="isCurrentUserAdmin"

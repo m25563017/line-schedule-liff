@@ -109,20 +109,11 @@ onMounted(async () => {
                 :to="`/group/${group.id}/edit`"
                 class="tw:absolute tw:top-4 tw:right-4 tw:bg-black/30 tw:text-white tw:p-2 tw:rounded-full tw:backdrop-blur-sm tw:flex tw:items-center tw:justify-center tw:w-10 tw:h-10 hover:tw:bg-black/50 tw:transition"
             >
-                <svg
+                <img
                     class="tw:w-5 tw:h-5"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                >
-                    <path
-                        d="M10.325 4.317a1.75 1.75 0 013.35 0l.242.97a1.75 1.75 0 002.451 1.21l.9-.45a1.75 1.75 0 012.327.78l.875 1.75a1.75 1.75 0 01-.78 2.327l-.9.45a1.75 1.75 0 00-1.01 1.743l.123.99a1.75 1.75 0 01-1.735 1.936h-1.75a1.75 1.75 0 00-1.55.96l-.45.9a1.75 1.75 0 01-3.11 0l-.45-.9a1.75 1.75 0 00-1.55-.96h-1.75a1.75 1.75 0 01-1.735-1.936l.123-.99a1.75 1.75 0 00-1.01-1.743l-.9-.45a1.75 1.75 0 01-.78-2.327l.875-1.75a1.75 1.75 0 012.327-.78l.9.45a1.75 1.75 0 002.451-1.21l.242-.97z"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                    />
-                    <circle cx="12" cy="12" r="3" />
-                </svg>
+                    src="../assets/img/setting.png"
+                    alt="setting"
+                />
             </router-link>
 
             <div
@@ -161,24 +152,11 @@ onMounted(async () => {
                     @click="showInviteModal = true"
                     class="tw:bg-gray-100 tw:text-gray-700 tw:p-3 tw:rounded-lg tw:font-bold tw:flex tw:flex-col tw:items-center tw:gap-1 active:tw:scale-95 tw:transition"
                 >
-                    <svg
-                        class="tw:w-5 tw:h-5"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                    >
-                        <path
-                            d="M10.5 7.5l3-3a3 3 0 114.243 4.243l-2.25 2.25M13.5 16.5l-3 3A3 3 0 116.257 15.257l2.25-2.25"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                        />
-                        <path
-                            d="M9 15l6-6"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                        />
-                    </svg>
+                    <img
+                        class="tw:w-4 tw:h-4"
+                        src="../assets/img/link.png"
+                        alt="invite"
+                    />
                     <span>邀請成員</span>
                 </button>
             </div>

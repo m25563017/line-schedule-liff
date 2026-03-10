@@ -21,24 +21,50 @@ const creator = computed(() => {
         <div class="tw:flex tw:justify-between tw:items-start tw:mb-2">
             <span class="tw:font-bold tw:text-gray-800">{{ event.title }}</span>
             <div class="tw:flex tw:items-center tw:gap-2">
-                <span
+                <div
                     v-if="event.finalDate"
-                    class="tw:bg-accent/10 tw:text-accent tw:border tw:border-accent/30 tw:text-[10px] tw:px-2 tw:py-1 tw:rounded-full tw:font-bold tw:whitespace-nowrap"
+                    class="tw:bg-accent/10 tw:text-accent tw:border tw:border-accent/30 tw:text-[10px] tw:px-2 tw:py-1 tw:rounded-full tw:font-bold tw:whitespace-nowrap tw:flex tw:items-center tw:gap-1"
                 >
-                    🎉 已定案
-                </span>
-                <span
+                    <svg
+                        class="tw:w-3 tw:h-3"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="3"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M4.5 12.75l6 6 9-13.5"
+                        />
+                    </svg>
+                    <span>已定案</span>
+                </div>
+                <div
                     v-else
-                    class="tw:bg-primary/10 tw:text-primary tw:border tw:border-primary/30 tw:text-[10px] tw:px-2 tw:py-1 tw:rounded-full tw:font-bold tw:whitespace-nowrap"
+                    class="tw:flex tw:items-center tw:gap-1 tw:bg-primary/10 tw:text-primary tw:border tw:border-primary/30 tw:text-[10px] tw:px-2 tw:py-1 tw:rounded-full tw:font-bold tw:whitespace-nowrap"
                 >
-                    🗓️ 選擇中
-                </span>
+                    <svg
+                        class="tw:w-3 tw:h-3"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="2.5"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                    </svg>
+                    <span>選擇中</span>
+                </div>
             </div>
         </div>
 
         <div class="tw:flex tw:justify-between tw:items-end">
-            <div class="tw:text-xs tw:text-gray-500 tw:space-y-1.5">
-                <div class="tw:flex tw:items-center tw:gap-1.5">
+            <div class="tw:text-xs tw:text-gray-500 tw:space-y-1.5 tw:w-full">
+                <div class="tw:flex tw:items-center tw:gap-1.5 tw:w-full">
                     <img
                         :src="
                             creator.pictureUrl ||
@@ -50,41 +76,38 @@ const creator = computed(() => {
                 </div>
                 <div
                     v-if="event.finalDate"
-                    class="tw:font-bold tw:text-accent tw:flex tw:items-center tw:gap-1"
+                    class="tw:bg-orange-50 tw:w-full tw:border tw:border-orange-200 tw:rounded-lg tw:p-3 tw:flex tw:items-center tw:justify-center tw:gap-3"
                 >
-                    <svg
-                        class="tw:w-4 tw:h-4"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
+                    <div
+                        class="tw:flex tw:items-center tw:gap-1.5 tw:text-orange-600"
                     >
-                        <path
-                            d="M7 3h5a3 3 0 013 3v12l-3-2-3 2V6a3 3 0 00-3-3z"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                        />
-                    </svg>
-                    <span
-                        >決定日期：{{
-                            event.finalDate.replace(/-/g, " / ")
-                        }}</span
+                        <svg
+                            class="tw:w-5 tw:h-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke-width="2"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25m-9 3.75h.008v.008H12v-.008z"
+                            />
+                        </svg>
+                        <span class="tw:text-sm tw:font-bold">決定日期</span>
+                    </div>
+                    <div
+                        class="tw:text-lg tw:font-black tw:text-orange-600 tw:tracking-wider"
                     >
+                        {{ event.finalDate.replace(/-/g, " / ") }}
+                    </div>
                 </div>
                 <div v-else class="tw:flex tw:items-center tw:gap-1">
-                    <svg
+                    <img
                         class="tw:w-4 tw:h-4"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                    >
-                        <path
-                            d="M8 3h8v2.5L13 12l3 6.5V21H8v-2.5L11 12 8 5.5V3z"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                        />
-                    </svg>
+                        src="../assets/img/calendar (1).png"
+                        alt="calendar"
+                    />
                     <span
                         >開放區間：{{
                             event.targetMonths?.length || 0

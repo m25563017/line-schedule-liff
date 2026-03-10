@@ -282,7 +282,7 @@ const handleDeleteEvent = () => {
                             <p class="tw:text-xs tw:text-orange-600 tw:mt-1">
                                 {{
                                     isMissingOriginalMonths
-                                        ? "⚠️ 新區間未包含原本的月份，強烈建議清空舊資料以免混亂。"
+                                        ? "新區間未包含原本的月份，強烈建議清空舊資料以免混亂。"
                                         : "您變更了選擇區間，可勾選此項讓所有成員重新填寫。"
                                 }}
                             </p>

@@ -126,9 +126,9 @@ watch(userProfile, (val) => {
 
         <router-link
             to="/create"
-            class="tw:fixed tw:bottom-6 tw:right-6 tw:w-14 tw:h-14 tw:bg-primary tw:text-white tw:rounded-full tw:flex tw:items-center tw:justify-center tw:shadow-lg tw:text-3xl tw:hover:scale-105 tw:transition"
+            class="tw:fixed tw:bottom-6 tw:right-6 tw:p-4 tw:bg-primary tw:text-white tw:rounded-full tw:flex tw:items-center tw:justify-center tw:shadow-lg"
         >
-            +
+            <p class="tw:font-bold tw:text-lg">建立群組 +</p>
         </router-link>
     </div>
 </template>

@@ -184,16 +184,41 @@ const handleJoin = async (virtualId) => {
                     </div>
 
                     <div
-                        class="tw:pt-4 tw:border-t tw:border-gray-100 tw:text-center"
+                        class="tw:pt-4 tw:border-t tw:border-gray-100 tw:text-center tw:flex tw:items-center tw:justify-center tw:gap-2"
                     >
                         <p class="tw:text-xs tw:text-gray-400">
-                            上面沒有你的名字嗎？<br />請聯繫主揪先把你加入名單喔！🔒
+                            上面沒有你的名字嗎？<br />請聯繫主揪先把你加入名單喔！
                         </p>
+                        <svg
+                            class="tw:w-12 tw:h-12"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke-width="1.5"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
+                            />
+                        </svg>
                     </div>
                 </div>
 
                 <div v-else class="tw:text-center tw:py-4">
-                    <div class="tw:text-4xl tw:mb-3">🔒</div>
+                    <svg
+                        class="tw:w-12 tw:h-12"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="1.5"
+                        stroke="currentColor"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
+                        />
+                    </svg>
                     <h3 class="tw:font-bold tw:text-gray-800 tw:mb-2">
                         目前沒有開放加入的位置
                     </h3>
