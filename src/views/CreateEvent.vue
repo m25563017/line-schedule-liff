@@ -3,6 +3,7 @@ import { ref, inject, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { db } from "../utils/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { addGroupActivityLog } from "../utils/activityLog";
 
 const route = useRoute();
 const router = useRouter();
@@ -59,6 +60,17 @@ const handleCreate = async () => {
             createdBy: userProfile.value.userId,
             createdAt: serverTimestamp(),
             availabilities: {},
+        });
+
+        await addGroupActivityLog({
+            groupId,
+            action: "event.create",
+            actor: {
+                userId: userProfile.value.userId,
+                displayName: userProfile.value.displayName,
+                pictureUrl: userProfile.value.pictureUrl,
+            },
+            target: { type: "event", id: docRef.id, title: title.value },
         });
 
         router.push(`/group/${groupId}/event/${docRef.id}`);

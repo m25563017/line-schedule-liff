@@ -8,9 +8,11 @@ import {
     uploadBytes,
     getDownloadURL,
 } from "firebase/storage";
+import { useNotify } from "@pieda/core";
 
 const router = useRouter();
 const userProfile = inject("userProfile");
+const $notify = useNotify();
 
 const groupName = ref("");
 const groupImageFile = ref(null);

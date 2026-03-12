@@ -2,7 +2,14 @@
 import { ref, inject, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { db, storage } from "../utils/firebase";
-import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import {
+    doc,
+    getDoc,
+    updateDoc,
+    deleteDoc,
+    collection,
+    getDocs,
+} from "firebase/firestore";
 import {
     ref as storageRef,
     uploadBytes,
@@ -186,12 +193,26 @@ const handleUpdate = async () => {
     }
 };
 
-// 刪除群組
+async function deleteGroupSubcollections(groupId) {
+    const subcollections = ["events", "activityLogs"];
+
+    for (const sub of subcollections) {
+        const colRef = collection(db, "groups", groupId, sub);
+        const snap = await getDocs(colRef);
+        if (snap.empty) continue;
+
+        const deletions = snap.docs.map((d) => deleteDoc(d.ref));
+        await Promise.all(deletions);
+    }
+}
+
+// 刪除群組（含子集合 events、activityLogs）
 const handleDeleteGroup = async () => {
     $notify
         .alert({
             title: "系統通知",
-            message: "確定要刪除此群組嗎？此操作無法復原！",
+            message:
+                "確定要刪除此群組嗎？\n此操作會一併刪除群組底下所有活動與動作紀錄，且無法復原！",
             variant: "question",
             confirm: true,
         })
@@ -200,6 +221,7 @@ const handleDeleteGroup = async () => {
 
             isSubmitting.value = true;
             try {
+                await deleteGroupSubcollections(groupId);
                 await deleteDoc(doc(db, "groups", groupId));
                 $notify.alert({
                     title: "系統通知",

@@ -7,6 +7,7 @@ import { useNotify } from "@pieda/core";
 import EventCalendar from "../components/EventCalendar.vue";
 import EventStats from "../components/EventStats.vue";
 import DecideModal from "../components/DecideModal.vue";
+import { addGroupActivityLog } from "../utils/activityLog";
 
 const route = useRoute();
 const router = useRouter();
@@ -60,13 +61,26 @@ const memberMap = computed(() => {
     return map;
 });
 
-const isCurrentUserAdmin = computed(
-    () => group.value?.createdBy === userProfile.value?.userId,
+const currentUserId = computed(() => userProfile.value?.userId || "");
+const currentMemberRole = computed(() => {
+    if (!group.value || !currentUserId.value) return "viewer";
+    return group.value.members?.[currentUserId.value]?.role || "viewer";
+});
+const isGroupOwner = computed(
+    () => group.value?.createdBy === currentUserId.value,
 );
+const isEventOwner = computed(
+    () => event.value?.createdBy === currentUserId.value,
+);
+const canManageEvent = computed(
+    () => isGroupOwner.value || isEventOwner.value,
+);
+const canFinalizeEvent = canManageEvent;
 const managedUsers = computed(() => {
     if (!group.value || !userProfile.value) return [];
     const me = { id: userProfile.value.userId, name: "我自己" };
-    if (isCurrentUserAdmin.value) {
+    // 群組建立者或活動建立者可以幫虛擬成員代填
+    if (isGroupOwner.value || isEventOwner.value) {
         const virtuals = Object.entries(group.value.members || {})
             .filter(([id, m]) => m.isVirtual)
             .map(([id, m]) => ({ id, name: m.displayName + " (代填)" }));
@@ -87,6 +101,14 @@ const pendingUsers = computed(() =>
         .filter((uid) => !(availabilities.value[uid] || []).length > 0)
         .map((uid) => memberMap.value[uid]),
 );
+
+// 尚未填寫且為「已認領的 LINE 用戶」（可發送 Flex 提醒；虛擬成員無 LINE userId）
+const pendingUserIdsWithLine = computed(() => {
+    if (!group.value) return [];
+    return pendingUsers.value
+        .filter((u) => !group.value.members[u.id]?.isVirtual)
+        .map((u) => u.id);
+});
 
 const topDates = computed(() => {
     const counts = {};
@@ -190,15 +212,37 @@ const handleDecideClick = () => {
     }
 };
 
-// selectedDate
-const confirmFinalDate = async (selectedDate) => {
+// payload 為 { date, time } 或舊版字串 date
+const confirmFinalDate = async (payload) => {
+    const date = typeof payload === "string" ? payload : payload?.date;
+    const time =
+        typeof payload === "object" && payload?.time != null
+            ? payload.time
+            : "";
+    if (!date) return;
     isFinalizing.value = true;
     try {
-        await updateDoc(doc(db, "groups", groupId, "events", eventId), {
-            finalDate: selectedDate,
-        });
-        event.value.finalDate = selectedDate;
+        const updateData = { finalDate: date };
+        if (time !== undefined) updateData.finalTime = time;
+        await updateDoc(
+            doc(db, "groups", groupId, "events", eventId),
+            updateData,
+        );
+        event.value.finalDate = date;
+        event.value.finalTime = time;
         showDecideModal.value = false;
+
+        await addGroupActivityLog({
+            groupId,
+            action: "event.finalize",
+            actor: {
+                userId: userProfile.value?.userId,
+                displayName: userProfile.value?.displayName,
+                pictureUrl: userProfile.value?.pictureUrl,
+            },
+            target: { type: "event", id: eventId, title: event.value?.title },
+            meta: { finalDate: date, finalTime: time || "" },
+        });
     } catch (e) {
         $notify.alert({
             title: "系統通知",
@@ -210,15 +254,143 @@ const confirmFinalDate = async (selectedDate) => {
     }
 };
 
+function getEventPageUrl() {
+    const gid = route.params.id;
+    const eid = route.params.eventId;
+    return `${window.location.origin}${window.location.pathname || ""}#/group/${gid}/event/${eid}`;
+}
+
+function getRemindText() {
+    const url = getEventPageUrl();
+    return `【${event.value?.title || "活動"}】請記得填寫有空日期～\n${url}`;
+}
+
+function getFinalizedText() {
+    const url = getEventPageUrl();
+    const dateStr = event.value?.finalDate?.replace(/-/g, "/") || "";
+    const timeStr = event.value?.finalTime ? ` ${event.value.finalTime}` : "";
+    return `【${event.value?.title || "活動"}】已定案：${dateStr}${timeStr}\n${url}`;
+}
+
+async function shareViaLineShareTargetPicker(text) {
+    if (
+        typeof window !== "undefined" &&
+        window.liff?.isApiAvailable?.("shareTargetPicker")
+    ) {
+        try {
+            await window.liff.shareTargetPicker([{ type: "text", text }]);
+            return true;
+        } catch (e) {
+            if (
+                String(e?.message || e)
+                    .toLowerCase()
+                    .includes("cancel")
+            )
+                return false;
+            throw e;
+        }
+    }
+    return null; // 不支援時回傳 null，改為複製
+}
+
+async function copyToClipboard(text, successMessage) {
+    try {
+        await navigator.clipboard.writeText(text);
+        $notify.alert({
+            title: "系統通知",
+            message: successMessage,
+            variant: "success",
+        });
+    } catch {
+        $notify.alert({
+            title: "請手動複製",
+            message: "無法自動複製，請手動複製以下內容：\n\n" + text,
+            variant: "warning",
+        });
+    }
+}
+
+async function shareRemindToLine() {
+    const text = getRemindText();
+    try {
+        const sent = await shareViaLineShareTargetPicker(text);
+        if (sent === true) {
+            $notify.alert({
+                title: "系統通知",
+                message: "已發送到所選的聊天室（由你的帳號發出）。",
+                variant: "success",
+            });
+            return;
+        }
+        if (sent === false) return; // 使用者取消選擇
+        await copyToClipboard(
+            text,
+            "此環境無法開啟 LINE 選擇聊天室，已改為複製提醒文字。",
+        );
+    } catch (e) {
+        console.error(e);
+        await copyToClipboard(text, "無法開啟選擇聊天室，已改為複製提醒文字。");
+    }
+}
+
+async function shareFinalizedToLine() {
+    const text = getFinalizedText();
+    try {
+        const sent = await shareViaLineShareTargetPicker(text);
+        if (sent === true) {
+            $notify.alert({
+                title: "系統通知",
+                message: "已發送到所選的聊天室（由你的帳號發出）。",
+                variant: "success",
+            });
+            return;
+        }
+        if (sent === false) return;
+        await copyToClipboard(
+            text,
+            "此環境無法開啟 LINE 選擇聊天室，已改為複製定案訊息。",
+        );
+    } catch (e) {
+        console.error(e);
+        await copyToClipboard(text, "無法開啟選擇聊天室，已改為複製定案訊息。");
+    }
+}
+
 const isSaving = ref(false);
 const saveChanges = async () => {
     if (!selectedUserId.value) return;
     isSaving.value = true;
     try {
+        const targetId = selectedUserId.value;
         await updateDoc(doc(db, "groups", groupId, "events", eventId), {
-            [`availabilities.${selectedUserId.value}`]: tempDates.value,
+            [`availabilities.${targetId}`]: tempDates.value,
         });
-        availabilities.value[selectedUserId.value] = [...tempDates.value];
+        availabilities.value[targetId] = [...tempDates.value];
+
+        // 若是幫虛擬成員代填，寫入動作紀錄
+        const isSelf = targetId === currentUserId.value;
+        const member = memberMap.value[targetId];
+        if (!isSelf && member?.isVirtual) {
+            await addGroupActivityLog({
+                groupId,
+                action: "event.fillForVirtual",
+                actor: {
+                    userId: userProfile.value?.userId,
+                    displayName: userProfile.value?.displayName,
+                    pictureUrl: userProfile.value?.pictureUrl,
+                },
+                target: {
+                    type: "event",
+                    id: eventId,
+                    title: event.value?.title,
+                },
+                meta: {
+                    forUserId: targetId,
+                    forDisplayName: member.displayName || "",
+                },
+            });
+        }
+
         isEditing.value = false;
     } catch (e) {
         alert("儲存失敗");
@@ -282,7 +454,7 @@ const saveChanges = async () => {
             </h1>
 
             <router-link
-                v-if="isCurrentUserAdmin && !isEditing"
+                v-if="canManageEvent && !isEditing"
                 :to="`/group/${groupId}/event/${eventId}/edit`"
                 class="tw:absolute tw:right-4 tw:top-4 tw:text-gray-400 hover:tw:text-gray-700 tw:transition active:tw:scale-90"
                 title="活動設定"
@@ -315,19 +487,6 @@ const saveChanges = async () => {
                 v-if="isFinalized"
                 class="tw:bg-accent tw:text-white tw:p-4 tw:rounded-xl tw:shadow-md tw:mb-4 tw:text-center tw:animate-fade-in"
             >
-                <svg
-                    class="tw:w-6 tw:h-6 tw:mx-auto tw:mb-1"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke-width="2"
-                    stroke="currentColor"
-                >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M5.8 11.3L2 22l10.7-3.79M4 3h.01M22 8h.01M15 2h.01M22 20h.01M20 2.75a2.9 2.9 0 00-1.96 3.12v0c.1.86-.57 1.63-1.45 1.63h-.38c-.86 0-1.6.6-1.76 1.44L14 10m8 3l-.82-.33c-.86-.36-1.82.14-2.08 1.02a1.94 1.94 0 01-2.42 1.34h0a1.95 1.95 0 00-2.46 1.3l-.33.83m-3.03 2.03l-3.14 3.14a2 2 0 01-2.82 0l-1.18-1.18a2 2 0 010-2.82L7 12m4.5-.5a2.5 2.5 0 100 5 2.5 2.5 0 000-5z"
-                    />
-                </svg>
                 <div class="tw:text-sm tw:font-medium tw:opacity-90">
                     活動日期已定案
                 </div>
@@ -335,6 +494,12 @@ const saveChanges = async () => {
                     class="tw:text-2xl tw:font-black tw:tracking-wider tw:mt-1"
                 >
                     {{ event.finalDate.replace(/-/g, " / ") }}
+                    <span
+                        v-if="event.finalTime"
+                        class="tw:block tw:text-lg tw:mt-1 tw:opacity-90"
+                    >
+                        {{ event.finalTime }}
+                    </span>
                 </div>
             </div>
 
@@ -441,32 +606,67 @@ const saveChanges = async () => {
                 :respondedUsers="respondedUsers"
                 :pendingUsers="pendingUsers"
             />
+
+            <!-- 主揪：發送 LINE Flex 提醒尚未填寫的成員（僅限已認領的 LINE 用戶） -->
+            <div
+                v-if="
+                    !isEditing &&
+                    !isFinalized &&
+                    canManageEvent &&
+                    pendingUserIdsWithLine.length > 0
+                "
+                class="tw:mt-4 tw:bg-white tw:border tw:border-gray-200 tw:rounded-xl tw:p-4"
+            >
+                <p class="tw:text-sm tw:text-gray-600 tw:mb-3">
+                    尚有
+                    {{
+                        pendingUserIdsWithLine.length
+                    }}
+                    位成員未填寫，點下方按鈕可選擇 LINE 聊天室或群組發送提醒
+                </p>
+                <button
+                    type="button"
+                    @click="shareRemindToLine"
+                    class="tw:w-full tw:bg-[#06C755] tw:text-white tw:py-2.5 tw:rounded-xl tw:font-bold tw:text-sm tw:flex tw:items-center tw:justify-center tw:gap-2 active:tw:scale-95"
+                >
+                    <svg
+                        class="tw:w-4 tw:h-4"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            d="M24 10.3c0-5.7-5.4-10.3-12-10.3S0 4.6 0 10.3c0 5.1 4.3 9.4 10.1 10.2.4.1.9.3 1 .7l.3 1.9c0 .1.1.2.2.2.1 0 .2 0 .2-.1.9-.6 5-3.3 7.5-5.5 2.9-2.3 4.7-5 4.7-7.4z"
+                        />
+                    </svg>
+                    發送提醒到 LINE
+                </button>
+            </div>
         </div>
 
         <div
             v-if="!isEditing && isFinalized"
-            class="tw:fixed tw:bottom-0 tw:left-0 tw:w-full tw:bg-white tw:border-t tw:shadow-lg tw:p-4 tw:z-50 tw:animate-slide-up"
+            class="tw:fixed tw:bottom-0 tw:left-0 tw:w-full tw:bg-white tw:border-t tw:shadow-lg tw:p-4 tw:flex tw:gap-3 tw:z-50 tw:animate-slide-up"
         >
-            <button
-                disabled
-                class="tw:w-full tw:bg-gray-200 tw:text-gray-500 tw:py-3.5 tw:rounded-xl tw:font-bold tw:text-lg tw:flex tw:items-center tw:justify-center"
+            <span
+                class="tw:flex-1 tw:bg-gray-100 tw:text-gray-500 tw:py-3.5 tw:rounded-xl tw:font-bold tw:text-sm tw:flex tw:items-center tw:justify-center"
             >
-                <div class="tw:flex tw:items-center tw:gap-2">
-                    <svg
-                        class="tw:w-4 tw:h-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke-width="2.5"
-                        stroke="currentColor"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
-                        />
-                    </svg>
-                    <span>活動已定案，無法再更改</span>
-                </div>
+                活動已定案
+            </span>
+            <button
+                type="button"
+                @click="shareFinalizedToLine"
+                class="tw:flex-1 tw:bg-primary tw:text-white tw:py-3.5 tw:rounded-xl tw:font-bold tw:text-sm tw:flex tw:items-center tw:justify-center tw:gap-2 active:tw:scale-95"
+            >
+                <svg
+                    class="tw:w-4 tw:h-4"
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                >
+                    <path
+                        d="M24 10.3c0-5.7-5.4-10.3-12-10.3S0 4.6 0 10.3c0 5.1 4.3 9.4 10.1 10.2.4.1.9.3 1 .7l.3 1.9c0 .1.1.2.2.2.1 0 .2 0 .2-.1.9-.6 5-3.3 7.5-5.5 2.9-2.3 4.7-5 4.7-7.4z"
+                    />
+                </svg>
+                發送定案到 LINE
             </button>
         </div>
 
@@ -475,7 +675,7 @@ const saveChanges = async () => {
             class="tw:fixed tw:bottom-0 tw:left-0 tw:w-full tw:bg-white tw:border-t tw:border-gray-200 tw:shadow-lg tw:p-4 tw:flex tw:gap-3 tw:z-50 tw:animate-slide-up"
         >
             <button
-                v-if="isCurrentUserAdmin"
+                v-if="canFinalizeEvent"
                 @click="handleDecideClick"
                 class="tw:flex-1 tw:bg-accent tw:text-white tw:py-3.5 tw:rounded-xl tw:font-bold tw:shadow-md active:tw:scale-95 tw:transition"
             >
@@ -498,7 +698,7 @@ const saveChanges = async () => {
             </button>
             <button
                 @click="startEditing"
-                class="tw:flex-[2] tw:bg-primary tw:text-white tw:py-3.5 tw:rounded-xl tw:font-bold tw:text-lg tw:shadow-md active:tw:scale-95 tw:transition"
+                class="tw:flex-2 tw:bg-primary tw:text-white tw:py-3.5 tw:rounded-xl tw:font-bold tw:text-lg tw:shadow-md active:tw:scale-95 tw:transition"
             >
                 <span class="tw:inline-flex tw:items-center tw:gap-2">
                     <span>我要選日子</span>

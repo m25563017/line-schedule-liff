@@ -1,5 +1,103 @@
-# Vue 3 + Vite
+# LINE 共編排程機器人
 
-This template should help get you started developing with Vue 3 in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+Vue 3 + Vite + LIFF + Firebase 打造的 **LINE 群組共編排程** 應用。在 LINE 裡建立群組、發起活動、大家一起勾選有空的日子，主揪一鍵定案，告別「喬時間」的來回訊息。
 
-Learn more about IDE Support for Vue in the [Vue Docs Scaling up Guide](https://vuejs.org/guide/scaling-up/tooling.html#ide-support).
+---
+
+## 機器人簡介
+
+**LINE 共編排程機器人** 是專為「約時間」設計的 LINE 應用：主揪在 LINE 裡建立**群組**、先幫朋友預留**虛擬成員**名額，再發起**活動**、設定可選的月份；成員透過邀請連結加入、認領自己的身分後，在月曆上點選**有空的日期**。系統會統計「最多人有空」的 Top 3 日期，主揪可一鍵**決定日期**定案，之後大家就無法再改空檔，避免反覆修改。
+
+- **群組**：可設名稱、封面圖、成員（含虛擬成員，朋友之後再認領）。
+- **活動**：每個群組可有多個活動，每個活動有標題與可選月份範圍（最多 3 個月），成員在月曆上勾選空檔。
+- **主揪專用**：可代填虛擬成員的空檔、決定活動日期；定案前會提醒「尚有成員未填寫」。**不需機器人進 LINE 群組**：當有人尚未填寫時，主揪可按「發送 LINE 提醒」對尚未填寫的成員發送 Flex 訊息；**決定日期時**會自動對所有成員發送定案通知 Flex（皆為一對一推播，免付費 Push）。
+- **邀請**：產生專屬加入連結、複製連結或一鍵分享 LINE 邀請卡片。
+- **月曆**：以月為單位切換、顯示台灣假日、點日期可看「這天誰有空」。
+- **技術**：LIFF 登入、Firebase Firestore + Storage、Vue 3 + Vue Router + Tailwind，後端為 Firebase Functions（LINE Webhook + 提醒/定案通知 API）。
+- **使用方式**：在 LINE 聊天室對機器人傳送任意訊息，或加好友時，機器人會回傳「打開排程」按鈕，點擊後開啟 LIFF 服務頁面；**不支援在聊天室用指令建立活動**，所有建立群組、發起活動均在 LIFF 網頁內完成。機器人**不需加入任何 LINE 群組**，提醒與定案通知均以一對一 Flex 訊息發送給成員。
+
+適合社團、讀書會、球聚、出遊等需要**多人一起喬時間**的場景。
+
+---
+
+## 目前已有功能
+
+| 類別 | 功能                                                                                       |
+| ---- | ------------------------------------------------------------------------------------------ |
+| 登入 | LINE LIFF 登入、開發模式模擬帳號                                                           |
+| 群組 | 建立、列表、詳情、編輯（名稱/封面/成員）、刪除群組、邀請連結、LINE 分享卡片                |
+| 成員 | 虛擬成員預先建立、邀請連結加入並認領身分、權限（admin/editor）、移除成員                   |
+| 活動 | 發起活動（標題 + 月份範圍）、活動詳情、編輯活動（標題/月份/清除資料）、刪除活動            |
+| 排程 | 月曆選日期填寫空檔、主揪代填、查看每日可參加名單、Top 3 推薦日期、決定日期定案、定案後鎖定 |
+| 提醒 | 有人尚未填寫時主揪可「發送 LINE 提醒」；決定日期時自動對所有成員發送定案 Flex（一對一，免 Push） |
+| 其他 | 台灣假日標示（`holidays.js`）、封面圖上傳（Firebase Storage）、錯誤與載入狀態              |
+
+---
+
+## 目前缺少或可加強的功能
+
+### 1. 後端 / Webhook
+
+- **設計**：機器人僅用於**從聊天室打開 LIFF 服務頁面**（傳訊息或加好友時回傳「打開排程」按鈕），不在聊天室建立活動。LIFF ID 與前端一致，可透過環境變數 `LIFF_ID` 覆寫。
+- **Webhook 簽章驗證**：請求未做 LINE 簽章驗證，有安全風險，建議補上。
+
+### 2. 通知與提醒
+
+- 本服務為**免費使用**，不實作付費的 LINE Push 訂閱。提醒與定案通知均以**一對一 Flex 訊息**發送（Bot pushMessage），不需機器人加入 LINE 群組。
+- **活動提醒**：例如活動日前一天提醒等，目前沒有。
+
+### 3. 活動內容
+
+- **只有「日期」**：沒有活動的**具體時間**（幾點到幾點）、**地點**、**備註**，可考慮在活動詳情或編輯頁增加欄位。
+- **重複 / 週期活動**：不支援每週固定某天的活動類型。
+
+### 4. 體驗與維運
+
+- **離線 / 錯誤重試**：網路失敗或 Firestore 錯誤時，沒有明確的「重試」或暫存後再送。
+- **搜尋**：沒有群組或活動的搜尋、篩選。
+- **深色模式**：未提供主題切換。
+- **匯出 / 分享**：無法將空檔統計或定案結果匯出成圖片或連結分享到 LINE。
+
+### 5. 資料與權限
+
+- **群組刪除**：在 `EditGroup` 刪除群組時，會一併清除該群組底下的 `events` 與 `activityLogs` 子集合，再刪除 `groups/{id}` 文件（前端遞迴刪除，僅適用於單一群組資料量不大的情境）。
+- **成員角色**：
+  - `admin`：群組建立者。可編輯群組資料、管理成員、刪除群組，並可編輯／刪除任何活動、幫虛擬成員代填空檔、對任何活動進行定案。
+  - `editor`：可編輯成員。可以發起新活動，並對「自己建立」的活動擁有完整管理權（編輯內容、刪除、定案），且可在活動頁面幫群組中的虛擬成員代填空檔；對其他人的活動僅能填寫／修改自己的空檔。
+  - `viewer`：僅查看成員。只能查看群組與活動，並填寫／修改自己的空檔，無法建立或編輯活動，也不能定案。
+- **活動權限**：
+  - 「活動內容編輯／刪除／定案」的權限僅限於該活動的建立者（`createdBy`）與群組 `admin`，其他成員只能針對自己的空檔做變更。
+
+---
+
+## 本地開發
+
+```bash
+# 安裝依賴
+npm install
+
+# 開發
+npm run dev
+
+# 建置
+npm run build
+```
+
+後端（LINE Webhook）：
+
+```bash
+cd functions
+npm install
+# 設定 .env：CHANNEL_ACCESS_TOKEN, CHANNEL_SECRET（選填 LIFF_ID，預設與前端一致）
+# 部署：firebase deploy --only functions
+# 提醒/定案會呼叫 remindPendingUsers、notifyEventFinalized；若部署於其他 region 可設 VITE_FUNCTIONS_BASE
+```
+
+---
+
+## 技術棧
+
+- **前端**：Vue 3、Vue Router、Vite、Tailwind CSS、LIFF、@pieda/core（通知）
+- **後端 / DB**：Firebase（Firestore、Storage、Functions）、LINE Messaging API
+
+---

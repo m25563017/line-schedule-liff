@@ -10,12 +10,12 @@ import {
     getDocs,
     deleteField,
 } from "firebase/firestore";
-
-console.log("====== 🚀 成功進入 JoinGroup.vue 元件！ ======");
+import { useNotify } from "@pieda/core";
 
 const route = useRoute();
 const router = useRouter();
 const userProfile = inject("userProfile");
+const $notify = useNotify();
 const groupId = route.params.id;
 
 console.log("目前登入的使用者：", userProfile.value);

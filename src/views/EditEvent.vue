@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed, watch } from "vue";
+import { ref, onMounted, computed, watch, inject } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { db } from "../utils/firebase";
 import {
@@ -10,11 +10,13 @@ import {
     deleteField,
 } from "firebase/firestore";
 import { useNotify } from "@pieda/core";
+import { addGroupActivityLog } from "../utils/activityLog";
 
 const route = useRoute();
 const router = useRouter();
 const groupId = route.params.id;
 const eventId = route.params.eventId;
+const userProfile = inject("userProfile");
 const $notify = useNotify();
 
 const loading = ref(true);
@@ -25,6 +27,10 @@ const title = ref("");
 const startMonth = ref("");
 const monthCount = ref(1);
 const event = ref(null);
+const group = ref(null);
+
+// 活動已定案時，只能改名稱與刪除，不可改月份
+const isFinalized = computed(() => !!event.value?.finalDate);
 
 // 🌟 記錄原本的月份，用來做比對
 const originalMonths = ref([]);
@@ -33,33 +39,54 @@ const clearData = ref(false);
 
 onMounted(async () => {
     try {
-        const eventRef = doc(db, "groups", groupId, "events", eventId);
-        const docSnap = await getDoc(eventRef);
+        const [groupSnap, eventSnap] = await Promise.all([
+            getDoc(doc(db, "groups", groupId)),
+            getDoc(doc(db, "groups", groupId, "events", eventId)),
+        ]);
 
-        if (docSnap.exists()) {
-            event.value = docSnap.data();
-            title.value = event.value.title;
-
-            if (
-                event.value.targetMonths &&
-                event.value.targetMonths.length > 0
-            ) {
-                originalMonths.value = [...event.value.targetMonths];
-                startMonth.value = event.value.targetMonths[0];
-
-                const currentCount = event.value.targetMonths.length;
-                monthCount.value = currentCount > 3 ? 3 : currentCount;
-            }
-        } else {
+        if (!groupSnap.exists() || !eventSnap.exists()) {
             $notify.alert({
                 title: "系統通知",
-                message: "找不到此活動",
+                message: "找不到此群組或活動",
                 variant: "error",
             });
             router.push(`/group/${groupId}`);
+            return;
+        }
+
+        group.value = { id: groupSnap.id, ...groupSnap.data() };
+        event.value = eventSnap.data();
+        title.value = event.value.title;
+
+        if (event.value.targetMonths && event.value.targetMonths.length > 0) {
+            originalMonths.value = [...event.value.targetMonths];
+            startMonth.value = event.value.targetMonths[0];
+
+            const currentCount = event.value.targetMonths.length;
+            monthCount.value = currentCount > 3 ? 3 : currentCount;
+        }
+
+        // 權限檢查：只有活動建立者或群組建立者可以編輯 / 刪除活動
+        const uid = userProfile.value?.userId;
+        const isGroupOwner = group.value.createdBy === uid;
+        const isEventOwner = event.value.createdBy === uid;
+        if (!uid || (!isGroupOwner && !isEventOwner)) {
+            $notify.alert({
+                title: "系統通知",
+                message: "您沒有權限編輯此活動。",
+                variant: "error",
+            });
+            router.push(`/group/${groupId}/event/${eventId}`);
+            return;
         }
     } catch (e) {
         console.error("讀取失敗:", e);
+        $notify.alert({
+            title: "錯誤",
+            message: "讀取活動資料失敗，請稍後再試",
+            variant: "error",
+        });
+        router.push(`/group/${groupId}`);
     } finally {
         loading.value = false;
     }
@@ -102,7 +129,7 @@ watch(isMissingOriginalMonths, (missing) => {
     clearData.value = missing;
 });
 
-// 💾 儲存變更
+// 💾 儲存變更（定案後僅可更新名稱）
 const updateEvent = async () => {
     if (!title.value.trim()) {
         return $notify.alert({
@@ -111,7 +138,7 @@ const updateEvent = async () => {
             variant: "warning",
         });
     }
-    if (!startMonth.value) {
+    if (!isFinalized.value && !startMonth.value) {
         return $notify.alert({
             title: "提示",
             message: "請選擇開始月份！",
@@ -121,18 +148,46 @@ const updateEvent = async () => {
 
     isSaving.value = true;
     try {
-        const payload = {
-            title: title.value,
-            targetMonths: newMonths.value,
-        };
+        const payload = isFinalized.value
+            ? { title: title.value }
+            : {
+                  title: title.value,
+                  targetMonths: newMonths.value,
+              };
 
-        // 如果日期有變，且主揪勾選了「清除資料」，就把原本的填寫紀錄刪掉！
-        if (isDateChanged.value && clearData.value) {
+        if (!isFinalized.value && isDateChanged.value && clearData.value) {
             payload.availabilities = deleteField();
         }
 
         const eventRef = doc(db, "groups", groupId, "events", eventId);
         await updateDoc(eventRef, payload);
+
+        const oldTitle = event.value?.title ?? "";
+        const newTitle = title.value.trim();
+        const titleChanged = oldTitle !== newTitle;
+        const timeRangeChanged =
+            !isFinalized.value && isDateChanged.value;
+
+        await addGroupActivityLog({
+            groupId,
+            action: "event.update",
+            actor: {
+                userId: userProfile.value?.userId,
+                displayName: userProfile.value?.displayName,
+                pictureUrl: userProfile.value?.pictureUrl,
+            },
+            target: {
+                type: "event",
+                id: eventId,
+                title: newTitle,
+            },
+            meta: {
+                oldTitle,
+                newTitle,
+                titleChanged,
+                timeRangeChanged,
+            },
+        });
 
         $notify.alert({
             title: "成功",
@@ -169,6 +224,21 @@ const handleDeleteEvent = () => {
             try {
                 const eventRef = doc(db, "groups", groupId, "events", eventId);
                 await deleteDoc(eventRef);
+
+                await addGroupActivityLog({
+                    groupId,
+                    action: "event.delete",
+                    actor: {
+                        userId: userProfile.value?.userId,
+                        displayName: userProfile.value?.displayName,
+                        pictureUrl: userProfile.value?.pictureUrl,
+                    },
+                    target: {
+                        type: "event",
+                        id: eventId,
+                        title: title.value || event.value?.title || "",
+                    },
+                });
 
                 $notify.alert({
                     title: "成功",
@@ -235,60 +305,69 @@ const handleDeleteEvent = () => {
                     />
                 </div>
 
-                <div>
-                    <label
-                        class="tw:block tw:font-bold tw:text-gray-700 tw:mb-2"
-                        >開始月份</label
-                    >
-                    <input
-                        v-model="startMonth"
-                        type="month"
-                        class="tw:w-full tw:p-3 tw:border tw:border-gray-200 tw:bg-gray-50 tw:rounded-lg tw:outline-none focus:tw:ring-2 focus:tw:ring-primary tw:transition"
-                    />
-                </div>
-
-                <div>
-                    <label
-                        class="tw:block tw:font-bold tw:text-gray-700 tw:mb-2"
-                        >開放選擇區間</label
-                    >
-                    <select
-                        v-model="monthCount"
-                        class="tw:w-full tw:p-3 tw:border tw:border-gray-200 tw:bg-gray-50 tw:rounded-lg tw:outline-none focus:tw:ring-2 focus:tw:ring-primary tw:transition"
-                    >
-                        <option :value="1">1 個月</option>
-                        <option :value="2">2 個月</option>
-                        <option :value="3">3 個月</option>
-                    </select>
-                </div>
-
-                <div
-                    v-if="isDateChanged"
-                    class="tw:mt-4 tw:p-3 tw:bg-orange-50 tw:border tw:border-orange-200 tw:rounded-lg tw:animate-fade-in"
-                >
-                    <label
-                        class="tw:flex tw:items-start tw:gap-3 tw:cursor-pointer"
-                    >
+                <!-- 定案後不可再改月份，僅能改名稱與刪除 -->
+                <template v-if="!isFinalized">
+                    <div>
+                        <label
+                            class="tw:block tw:font-bold tw:text-gray-700 tw:mb-2"
+                            >開始月份</label
+                        >
                         <input
-                            type="checkbox"
-                            v-model="clearData"
-                            class="tw:mt-1 tw:w-4 tw:h-4 tw:text-primary tw:rounded tw:border-gray-300 focus:tw:ring-primary"
+                            v-model="startMonth"
+                            type="month"
+                            class="tw:w-full tw:p-3 tw:border tw:border-gray-200 tw:bg-gray-50 tw:rounded-lg tw:outline-none focus:tw:ring-2 focus:tw:ring-primary tw:transition"
                         />
-                        <div class="tw:flex-1">
-                            <span
-                                class="tw:text-sm tw:font-bold tw:text-orange-800"
-                                >清空所有人已填寫的日期</span
-                            >
-                            <p class="tw:text-xs tw:text-orange-600 tw:mt-1">
-                                {{
-                                    isMissingOriginalMonths
-                                        ? "新區間未包含原本的月份，強烈建議清空舊資料以免混亂。"
-                                        : "您變更了選擇區間，可勾選此項讓所有成員重新填寫。"
-                                }}
-                            </p>
-                        </div>
-                    </label>
-                </div>
+                    </div>
+
+                    <div>
+                        <label
+                            class="tw:block tw:font-bold tw:text-gray-700 tw:mb-2"
+                            >開放選擇區間</label
+                        >
+                        <select
+                            v-model="monthCount"
+                            class="tw:w-full tw:p-3 tw:border tw:border-gray-200 tw:bg-gray-50 tw:rounded-lg tw:outline-none focus:tw:ring-2 focus:tw:ring-primary tw:transition"
+                        >
+                            <option :value="1">1 個月</option>
+                            <option :value="2">2 個月</option>
+                            <option :value="3">3 個月</option>
+                        </select>
+                    </div>
+
+                    <div
+                        v-if="isDateChanged"
+                        class="tw:mt-4 tw:p-3 tw:bg-orange-50 tw:border tw:border-orange-200 tw:rounded-lg tw:animate-fade-in"
+                    >
+                        <label
+                            class="tw:flex tw:items-start tw:gap-3 tw:cursor-pointer"
+                        >
+                            <input
+                                type="checkbox"
+                                v-model="clearData"
+                                class="tw:mt-1 tw:w-4 tw:h-4 tw:text-primary tw:rounded tw:border-gray-300 focus:tw:ring-primary"
+                            />
+                            <div class="tw:flex-1">
+                                <span
+                                    class="tw:text-sm tw:font-bold tw:text-orange-800"
+                                    >清空所有人已填寫的日期</span
+                                >
+                                <p class="tw:text-xs tw:text-orange-600 tw:mt-1">
+                                    {{
+                                        isMissingOriginalMonths
+                                            ? "新區間未包含原本的月份，強烈建議清空舊資料以免混亂。"
+                                            : "您變更了選擇區間，可勾選此項讓所有成員重新填寫。"
+                                    }}
+                                </p>
+                            </div>
+                        </label>
+                    </div>
+                </template>
+                <p
+                    v-else
+                    class="tw:text-sm tw:text-gray-500 tw:bg-gray-50 tw:p-3 tw:rounded-lg"
+                >
+                    活動已定案，僅可修改名稱或刪除活動。
+                </p>
 
                 <button
                     @click="updateEvent"

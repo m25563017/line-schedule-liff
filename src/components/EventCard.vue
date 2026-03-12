@@ -76,7 +76,7 @@ const creator = computed(() => {
                 </div>
                 <div
                     v-if="event.finalDate"
-                    class="tw:bg-orange-50 tw:w-full tw:border tw:border-orange-200 tw:rounded-lg tw:p-3 tw:flex tw:items-center tw:justify-center tw:gap-3"
+                    class="tw:bg-orange-50 tw:w-full tw:border tw:border-orange-200 tw:rounded-lg tw:p-2 tw:flex tw:items-center tw:justify-center tw:gap-3"
                 >
                     <div
                         class="tw:flex tw:items-center tw:gap-1.5 tw:text-orange-600"
@@ -94,20 +94,20 @@ const creator = computed(() => {
                                 d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25m-9 3.75h.008v.008H12v-.008z"
                             />
                         </svg>
-                        <span class="tw:text-sm tw:font-bold">決定日期</span>
+                        <span class="tw:text-sm tw:font-bold">日期</span>
                     </div>
                     <div
                         class="tw:text-lg tw:font-black tw:text-orange-600 tw:tracking-wider"
                     >
                         {{ event.finalDate.replace(/-/g, " / ") }}
                     </div>
+                    <span
+                        v-if="event.finalTime"
+                        class="tw:block tw:text-sm tw:font-bold tw:text-orange-600 tw:mt-0.5"
+                        >{{ event.finalTime }}</span
+                    >
                 </div>
                 <div v-else class="tw:flex tw:items-center tw:gap-1">
-                    <img
-                        class="tw:w-4 tw:h-4"
-                        src="../assets/img/calendar (1).png"
-                        alt="calendar"
-                    />
                     <span
                         >開放區間：{{
                             event.targetMonths?.length || 0
