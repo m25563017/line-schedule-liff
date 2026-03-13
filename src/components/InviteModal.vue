@@ -2,17 +2,17 @@
 import { useNotify } from "@pieda/core";
 
 const props = defineProps({
-    show: Boolean, // 控制是否顯示
+    show: Boolean,
     groupName: String, // 群組名稱 (分享文字會用到)
     inviteLink: String, // 邀請連結
-    coverUrl: String, // 群組封面 (LINE Flex Message 會用到)
+    coverUrl: String, // 群組封面 (LINE Flex Message)
 });
 
 const emit = defineEmits(["close"]);
 
 const $notify = useNotify();
 
-// 1. 複製純文字連結
+// 複製純文字
 const copyInviteLink = async () => {
     try {
         await navigator.clipboard.writeText(props.inviteLink);
@@ -21,7 +21,7 @@ const copyInviteLink = async () => {
             message: "邀請連結已複製！快去貼給 LINE 的朋友吧！",
             variant: "success",
         });
-        emit("close"); // 成功後自動關閉視窗
+        emit("close");
     } catch (err) {
         $notify.alert({
             title: "請手動複製",
@@ -33,7 +33,7 @@ const copyInviteLink = async () => {
     }
 };
 
-// 2. 傳送 LINE Flex Message
+// LINE Flex Message
 const shareToLine = async () => {
     if (window.liff && window.liff.isApiAvailable("shareTargetPicker")) {
         try {
@@ -104,7 +104,7 @@ const shareToLine = async () => {
     }
 };
 
-// 3. 降級純文字分享
+// 降級純文字分享
 const fallbackShare = () => {
     const text = `邀請你加入「${props.groupName}」！快點擊連結加入吧：`;
     const lineShareUrl = `https://lineit.line.me/share/ui?text=${encodeURIComponent(text)}&url=${encodeURIComponent(props.inviteLink)}`;

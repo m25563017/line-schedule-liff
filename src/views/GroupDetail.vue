@@ -25,7 +25,6 @@ const loading = ref(true);
 
 const $notify = useNotify();
 
-// 控制 InviteModal 是否顯示
 const showInviteModal = ref(false);
 
 // 動作紀錄
@@ -98,7 +97,7 @@ const memberCount = computed(
     () => Object.keys(group.value?.members || {}).length,
 );
 
-// 統一處理 userProfile 可能是 ref 或一般物件的情況
+// 統一 userProfile (可能是 ref 或一般物件)
 const currentUserId = computed(() => {
     if (!userProfile) return "";
     const raw = userProfile.value ?? userProfile;
@@ -121,7 +120,7 @@ const canCreateEvent = computed(() => {
     return role === "editor" || role === "admin";
 });
 
-// 產生專屬邀請網址 (給 InviteModal 用)
+// 產生邀請網址 (InviteModal)
 const inviteLink = computed(() => {
     return `${window.location.origin}/#/group/${groupId}/join`;
 });

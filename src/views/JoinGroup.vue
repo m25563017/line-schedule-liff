@@ -32,13 +32,17 @@ onMounted(async () => {
         if (docSnap.exists()) {
             group.value = { id: docSnap.id, ...docSnap.data() };
 
-            // 防呆檢查：如果這個人已經在群組裡了，直接踢回群組首頁
+            // 如果已經在群組裡了，返回群組首頁
             if (group.value.members[userProfile.value.userId]) {
                 alert("你已經在這個群組裡囉！");
                 router.push(`/group/${groupId}`);
             }
         } else {
-            alert("找不到此群組！");
+            $notify.alert({
+                title: "系統通知",
+                message: "找不到此群組！",
+                variant: "error",
+            });
             router.push("/list");
         }
     } catch (e) {
@@ -48,7 +52,7 @@ onMounted(async () => {
     }
 });
 
-// 過濾出目前群組裡所有的「虛擬成員」讓使用者認領
+// 過濾出所有的「虛擬成員」讓使用者認領
 const virtualMembers = computed(() => {
     if (!group.value) return [];
     return Object.entries(group.value.members || {})
@@ -57,7 +61,7 @@ const virtualMembers = computed(() => {
 });
 
 const handleJoin = async (virtualId) => {
-    if (!virtualId) return; // 嚴格防護：沒有選擇虛擬身分就拒絕執行
+    if (!virtualId) return; // 沒有選擇虛擬身分就拒絕執行
 
     isSubmitting.value = true;
     try {
@@ -67,7 +71,7 @@ const handleJoin = async (virtualId) => {
 
         const oldRole = newMembersMap[virtualId].role;
 
-        // 1. 刪除舊的虛擬身分，換上真實使用者的身分 (繼承原本的權限)
+        // 刪除舊的虛擬身分，換上真實使用者的身分
         delete newMembersMap[virtualId];
         newMembersMap[userProfile.value.userId] = {
             displayName: userProfile.value.displayName,
@@ -76,18 +80,18 @@ const handleJoin = async (virtualId) => {
             isVirtual: false,
         };
 
-        // 2. 更新 Array 名單
+        // 更新 Array 名單
         const index = newMemberIds.indexOf(virtualId);
         if (index > -1) newMemberIds.splice(index, 1);
         newMemberIds.push(userProfile.value.userId);
 
-        // 3. 更新群組資料庫
+        // 更新群組資料庫
         await updateDoc(groupRef, {
             members: newMembersMap,
             memberIds: newMemberIds,
         });
 
-        // 4. 轉移所有活動的月曆紀錄
+        // 轉移所有活動的月曆紀錄
         const eventsRef = collection(db, "groups", groupId, "events");
         const eventSnaps = await getDocs(eventsRef);
 
@@ -112,7 +116,11 @@ const handleJoin = async (virtualId) => {
         router.push(`/group/${groupId}`);
     } catch (e) {
         console.error("加入失敗", e);
-        alert("發生錯誤，請稍後再試");
+        $notify.alert({
+            title: "系統通知",
+            message: "發生錯誤，請稍後再試",
+            variant: "error",
+        });
     } finally {
         isSubmitting.value = false;
     }

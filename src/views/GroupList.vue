@@ -17,7 +17,7 @@ const fetchGroups = async () => {
         );
         const querySnapshot = await getDocs(q);
 
-        // 整理資料，按照建立時間排序 (前端排序)
+        // 按照建立時間排序
         const data = querySnapshot.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
@@ -29,6 +29,11 @@ const fetchGroups = async () => {
         );
     } catch (e) {
         console.error("讀取群組失敗", e);
+        $notify.alert({
+            title: "系統通知",
+            message: "讀取群組失敗",
+            variant: "error",
+        });
     } finally {
         loading.value = false;
     }

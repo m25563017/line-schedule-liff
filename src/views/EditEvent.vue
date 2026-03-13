@@ -32,9 +32,9 @@ const group = ref(null);
 // 活動已定案時，只能改名稱與刪除，不可改月份
 const isFinalized = computed(() => !!event.value?.finalDate);
 
-// 🌟 記錄原本的月份，用來做比對
+// 記錄原本的月份，用來做比對
 const originalMonths = ref([]);
-// 🌟 是否清除現有資料的選項綁定
+// 是否清除現有資料的選項綁定
 const clearData = ref(false);
 
 onMounted(async () => {
@@ -92,7 +92,7 @@ onMounted(async () => {
     }
 });
 
-// 🌟 即時計算出「新的月份陣列」
+// 即時計算出「新的月份陣列」
 const newMonths = computed(() => {
     if (!startMonth.value) return [];
     const months = [];
@@ -111,25 +111,25 @@ const newMonths = computed(() => {
     return months;
 });
 
-// 🌟 判斷：主揪是否有改動到日期？
+// 判斷：是否有改動到日期？
 const isDateChanged = computed(() => {
     if (originalMonths.value.length === 0) return false;
     if (originalMonths.value.length !== newMonths.value.length) return true;
     return !originalMonths.value.every((m, i) => m === newMonths.value[i]);
 });
 
-// 🌟 判斷：新的區間是不是「漏掉」了原本的某些月份？
+// 判斷：新的區間是不是「漏掉」了原本的某些月份？
 const isMissingOriginalMonths = computed(() => {
     if (originalMonths.value.length === 0) return false;
     return originalMonths.value.some((m) => !newMonths.value.includes(m));
 });
 
-// 🌟 監聽：如果漏掉了原本的月份，就自動幫主揪打勾「清除資料」
+// 如果漏掉了原本的月份，就自動清除資料
 watch(isMissingOriginalMonths, (missing) => {
     clearData.value = missing;
 });
 
-// 💾 儲存變更（定案後僅可更新名稱）
+// 儲存變更（定案後僅可更新名稱）
 const updateEvent = async () => {
     if (!title.value.trim()) {
         return $notify.alert({
@@ -165,8 +165,7 @@ const updateEvent = async () => {
         const oldTitle = event.value?.title ?? "";
         const newTitle = title.value.trim();
         const titleChanged = oldTitle !== newTitle;
-        const timeRangeChanged =
-            !isFinalized.value && isDateChanged.value;
+        const timeRangeChanged = !isFinalized.value && isDateChanged.value;
 
         await addGroupActivityLog({
             groupId,
@@ -207,7 +206,7 @@ const updateEvent = async () => {
     }
 };
 
-// 🗑️ 刪除活動
+// 刪除活動
 const handleDeleteEvent = () => {
     $notify
         .alert({
@@ -351,7 +350,9 @@ const handleDeleteEvent = () => {
                                     class="tw:text-sm tw:font-bold tw:text-orange-800"
                                     >清空所有人已填寫的日期</span
                                 >
-                                <p class="tw:text-xs tw:text-orange-600 tw:mt-1">
+                                <p
+                                    class="tw:text-xs tw:text-orange-600 tw:mt-1"
+                                >
                                     {{
                                         isMissingOriginalMonths
                                             ? "新區間未包含原本的月份，強烈建議清空舊資料以免混亂。"

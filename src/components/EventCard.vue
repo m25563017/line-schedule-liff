@@ -7,7 +7,7 @@ const props = defineProps({
     groupId: { type: String, required: true },
 });
 
-// 計算發起人的資料
+// 發起人的資料
 const creator = computed(() => {
     return props.members[props.event.createdBy] || {};
 });

@@ -12,15 +12,15 @@ const userProfile = inject("userProfile");
 const groupId = route.params.id;
 const title = ref("");
 
-// 1. 計算時間限制 (min 與 max)
+// 計算時間限制 (min 與 max)
 const today = new Date();
 const currentYear = today.getFullYear();
 const currentMonthNum = today.getMonth() + 1;
 
-// 🟢 最小值：這個月 (例如 "2024-03")
+// 最小值：這個月
 const minMonthStr = `${currentYear}-${String(currentMonthNum).padStart(2, "0")}`;
 
-// 🔴 最大值：三年後的同一個月 (例如 "2027-03")
+// 最大值：三年後的同一個月
 const maxYear = currentYear + 3;
 const maxMonthStr = `${maxYear}-${String(currentMonthNum).padStart(2, "0")}`;
 
@@ -30,7 +30,7 @@ const selectedStartMonth = ref(minMonthStr);
 // 開放幾個月
 const monthCount = ref(1);
 
-// 2. 自動計算開放的月份陣列
+// 自動計算開放的月份陣列
 const targetMonths = computed(() => {
     if (!selectedStartMonth.value) return [];
     const [year, month] = selectedStartMonth.value.split("-").map(Number);

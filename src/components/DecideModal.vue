@@ -151,7 +151,7 @@ const handleConfirm = () => {
                         >決定時間（24 小時制）：</label
                     >
                     <div class="tw:flex tw:gap-2">
-                        <!-- 小時：自訂可捲動列表，避免原生 select 滑不到 18–23 時 -->
+                        <!-- 自訂可捲動列表-->
                         <div class="tw:flex-1 tw:relative">
                             <button
                                 type="button"
@@ -216,7 +216,7 @@ const handleConfirm = () => {
                     </div>
                 </div>
 
-                <!-- 或選擇其他日期：放在最下方，有需求才展開 -->
+                <!-- 或選擇其他日期區塊 -->
                 <div class="tw:border-t tw:border-gray-100 tw:pt-4">
                     <button
                         type="button"

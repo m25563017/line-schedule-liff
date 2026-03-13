@@ -15,7 +15,7 @@ const isDev = import.meta.env.DEV;
 
 onMounted(async () => {
     try {
-        // 1. 開發模式邏輯
+        // 開發模式
         if (isDev) {
             console.log("🔧 開發模式：使用模擬帳號");
             // 模擬網路延遲
@@ -55,9 +55,13 @@ onMounted(async () => {
         // 初始化成功
         isLiffReady.value = true;
     } catch (err) {
-        // 3. 捕捉錯誤
+        // 捕捉錯誤
         console.error("LIFF Init Error", err);
-        errorMessage.value = "發生錯誤，無法啟動 LIFF。請稍後再試。";
+        $notify.alert({
+            title: "系統通知",
+            message: "發生錯誤，請稍後再試。",
+            variant: "error",
+        });
     }
 });
 </script>

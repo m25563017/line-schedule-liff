@@ -12,7 +12,6 @@ import {
 } from "date-fns";
 import { zhTW } from "date-fns/locale";
 
-// 接收父元件傳來的 v-model 資料
 const props = defineProps({
     modelValue: {
         type: Array,
@@ -25,42 +24,38 @@ const emit = defineEmits(["update:modelValue"]);
 // 狀態
 const currentMonth = ref(new Date());
 
-// 計算屬性：當前月份的標題
+// 當前月份的標題
 const monthTitle = computed(() => {
     return format(currentMonth.value, "yyyy年 M月", { locale: zhTW });
 });
 
-// 計算屬性：算出這個月所有的日子
+// 算出這個月所有的日子
 const daysInMonth = computed(() => {
     const start = startOfMonth(currentMonth.value);
     const end = endOfMonth(currentMonth.value);
     return eachDayOfInterval({ start, end });
 });
 
-// 計算屬性：1號前面要補幾個空白 (0=週日, 1=週一...)
+// 1號前面要補幾個空白 (0=週日, 1=週一...)
 const startDayIndex = computed(() => {
     return getDay(startOfMonth(currentMonth.value));
 });
 
-// 方法：切換月份
+// 切換月份
 const prevMonth = () => (currentMonth.value = subMonths(currentMonth.value, 1));
 const nextMonth = () => (currentMonth.value = addMonths(currentMonth.value, 1));
 
-// 方法：點選日期
+// 點選日期
 const toggleDate = (dateObj) => {
     const dateStr = format(dateObj, "yyyy-MM-dd");
     const newSelection = [...props.modelValue];
 
     if (newSelection.includes(dateStr)) {
-        // 移除
         const index = newSelection.indexOf(dateStr);
         newSelection.splice(index, 1);
     } else {
-        // 加入
         newSelection.push(dateStr);
     }
-
-    // 通知父元件更新 (Vue 的單向資料流)
     emit("update:modelValue", newSelection);
 };
 
@@ -109,7 +104,6 @@ const isSelected = (dateObj) => {
 </template>
 
 <style scoped>
-/* 簡單寫一點 CSS 讓它能看 (你可以之後換成 Tailwind) */
 .calendar-container {
     max-width: 350px;
     margin: 0 auto;
@@ -137,7 +131,7 @@ const isSelected = (dateObj) => {
     color: #666;
 }
 .date-cell {
-    aspect-ratio: 1; /* 保持正方形 */
+    aspect-ratio: 1;
     border: none;
     background: transparent;
     border-radius: 50%;
@@ -151,7 +145,7 @@ const isSelected = (dateObj) => {
     background-color: #f0f0f0;
 }
 .date-cell.active {
-    background-color: #42b883; /* Vue Green! */
+    background-color: var(--color-primary);
     color: white;
 }
 </style>

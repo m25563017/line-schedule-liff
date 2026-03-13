@@ -12,7 +12,6 @@ const props = defineProps({
     getUsers: Function,
 });
 
-// 定義要傳回給父元件的動作
 defineEmits(["prev", "next", "date-click"]);
 
 const localDays = computed(() => {
@@ -28,10 +27,10 @@ const localDays = computed(() => {
     for (let i = 1; i <= totalDays; i++) {
         const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(i).padStart(2, "0")}`;
 
-        // 🌟 把它移到外面：算出這天是星期幾 (0 是星期日，6 是星期六)
+        // 算出這天是星期幾 (0 ：日，6 ：六)
         const dayOfWeek = new Date(dateStr).getDay();
 
-        // 核心魔法：尋找連假區間
+        // 尋找連假區間
         const holiday = taiwanHolidays.find((h) => h.dates.includes(dateStr));
         let holidayInfo = null;
 
@@ -52,8 +51,7 @@ const localDays = computed(() => {
             dateStr,
             dayNum: i,
             holidayInfo,
-            // 🌟 加上一個新屬性：判斷這天是不是週末
-            isWeekend: dayOfWeek === 0 || dayOfWeek === 6,
+            isWeekend: dayOfWeek === 0 || dayOfWeek === 6, // 判斷這天是不是週末
         });
     }
     return daysArray;

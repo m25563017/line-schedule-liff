@@ -56,7 +56,7 @@ onMounted(async () => {
             groupName.value = data.name;
             previewImage.value = data.coverUrl;
 
-            // 將 members 的 Object Map 轉回 Array 方便在畫面上跑 v-for
+            // 將 members 的 Object Map 轉回 Array
             members.value = Object.entries(data.members || {}).map(
                 ([id, m]) => ({
                     id,
@@ -69,6 +69,11 @@ onMounted(async () => {
         }
     } catch (e) {
         console.error("讀取失敗", e);
+        $notify.alert({
+            title: "系統通知",
+            message: "讀取失敗",
+            variant: "error",
+        });
     } finally {
         loading.value = false;
     }
@@ -90,7 +95,6 @@ const handleFileChange = (event) => {
         return;
     }
 
-    // 如果檢查通過，就繼續原本的預覽流程
     groupImageFile.value = file;
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -133,7 +137,7 @@ const removeMember = (index) => {
         });
 };
 
-// 💾 儲存變更
+// 儲存變更
 const handleUpdate = async () => {
     if (!groupName.value.trim())
         return $notify.alert({
@@ -144,9 +148,8 @@ const handleUpdate = async () => {
     isSubmitting.value = true;
 
     try {
-        let imageUrl = previewImage.value; // 預設用原本的圖
+        let imageUrl = previewImage.value;
 
-        // 如果有選新圖片，就上傳
         if (groupImageFile.value) {
             const fileName = `group_covers/${Date.now()}_${groupImageFile.value.name}`;
             const imageRef = storageRef(storage, fileName);
@@ -154,7 +157,6 @@ const handleUpdate = async () => {
             imageUrl = await getDownloadURL(snapshot.ref);
         }
 
-        // 轉換成員陣列回 Object Map
         const membersMap = {};
         const memberIds = [];
         members.value.forEach((m) => {

@@ -48,7 +48,7 @@ const addVirtualMember = () => {
         isVirtual: true,
     });
 
-    newMemberName.value = ""; // 清空輸入
+    newMemberName.value = "";
 };
 
 const removeMember = (index) => {
@@ -65,13 +65,9 @@ const handleFileChange = (event) => {
             message: "群組封面圖片請勿超過 5MB！\n請壓縮後再重新上傳。",
             variant: "warning",
         });
-
-        // 把 input 清空，這樣使用者如果把圖壓縮後要再選一次同檔名的圖，才不會沒有反應
         event.target.value = "";
         return;
     }
-
-    // 如果檢查通過，就繼續原本的預覽流程
     groupImageFile.value = file;
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -81,8 +77,18 @@ const handleFileChange = (event) => {
 };
 
 const handleCreate = async () => {
-    if (!groupName.value.trim()) return alert("請輸入群組名稱");
-    if (!userProfile.value) return alert("請先登入");
+    if (!groupName.value.trim())
+        return $notify.alert({
+            title: "系統通知",
+            message: "請輸入群組名稱",
+            variant: "info",
+        });
+    if (!userProfile.value)
+        return $notify.alert({
+            title: "系統通知",
+            message: "請先登入",
+            variant: "info",
+        });
 
     isSubmitting.value = true;
 
@@ -121,7 +127,11 @@ const handleCreate = async () => {
         router.push("/list");
     } catch (e) {
         console.error("建立失敗", e);
-        alert(`建立失敗: ${e.message}`);
+        $notify.alert({
+            title: "系統通知",
+            message: `建立失敗: ${e.message}`,
+            variant: "error",
+        });
     } finally {
         isSubmitting.value = false;
     }
