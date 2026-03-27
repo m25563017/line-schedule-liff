@@ -2,8 +2,12 @@
 import { ref, onMounted, inject, watch } from "vue";
 import { db } from "../utils/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
+import { useNotify } from "@pieda/core";
 
 const userProfile = inject("userProfile");
+const isLineLoggedIn = inject("isLineLoggedIn");
+const loginLine = inject("loginLine");
+const $notify = useNotify();
 const groups = ref([]);
 const loading = ref(true);
 
@@ -41,9 +45,13 @@ const fetchGroups = async () => {
 
 onMounted(() => {
     if (userProfile.value) fetchGroups();
+    else loading.value = false;
 });
 watch(userProfile, (val) => {
-    if (val) fetchGroups();
+    if (val) {
+        loading.value = true;
+        fetchGroups();
+    }
 });
 </script>
 
@@ -63,15 +71,32 @@ watch(userProfile, (val) => {
 
             <div
                 v-else-if="groups.length === 0"
-                class="tw:text-center tw:mt-10"
+                class="tw:text-center tw:mt-10 tw:px-4"
             >
-                <p class="tw:text-gray-400 tw:mb-4">還沒有參加任何群組</p>
-                <router-link
-                    to="/create"
-                    class="tw:text-primary tw:font-bold tw:underline"
-                >
-                    建立第一個群組
-                </router-link>
+                <template v-if="!isLineLoggedIn">
+                    <p class="tw:text-gray-600 tw:mb-2">
+                        未登入 LINE：無法列出你參與的群組
+                    </p>
+                    <p class="tw:text-sm tw:text-gray-400 tw:mb-4">
+                        若你有邀請連結，可直接開啟連結瀏覽該群組（訪客僅能檢視）。
+                    </p>
+                    <button
+                        type="button"
+                        @click="loginLine"
+                        class="tw:w-full tw:max-w-xs tw:mx-auto tw:bg-[#06C755] tw:text-white tw:py-3 tw:rounded-xl tw:font-bold"
+                    >
+                        使用 LINE 登入
+                    </button>
+                </template>
+                <template v-else>
+                    <p class="tw:text-gray-400 tw:mb-4">還沒有參加任何群組</p>
+                    <router-link
+                        to="/create"
+                        class="tw:text-primary tw:font-bold tw:underline"
+                    >
+                        建立第一個群組
+                    </router-link>
+                </template>
             </div>
 
             <router-link
@@ -129,11 +154,21 @@ watch(userProfile, (val) => {
             </router-link>
         </div>
 
-        <router-link
-            to="/create"
-            class="tw:fixed tw:bottom-6 tw:right-6 tw:p-4 tw:bg-primary tw:text-white tw:rounded-full tw:flex tw:items-center tw:justify-center tw:shadow-lg"
-        >
-            <p class="tw:font-bold tw:text-lg">建立群組 +</p>
-        </router-link>
+        <div class="tw:fixed tw:bottom-6 tw:right-6 tw:flex tw:flex-col tw:items-end tw:gap-3">
+            <router-link
+                to="/help"
+                class="tw:px-4 tw:py-3 tw:bg-white tw:text-gray-700 tw:rounded-full tw:flex tw:items-center tw:justify-center tw:shadow-lg tw:border tw:border-gray-200 active:tw:scale-[0.98] tw:transition"
+            >
+                <span class="tw:font-bold tw:text-sm">使用說明</span>
+            </router-link>
+
+            <router-link
+                v-if="isLineLoggedIn"
+                to="/create"
+                class="tw:p-4 tw:bg-primary tw:text-white tw:rounded-full tw:flex tw:items-center tw:justify-center tw:shadow-lg active:tw:scale-[0.98] tw:transition"
+            >
+                <p class="tw:font-bold tw:text-lg">建立群組 +</p>
+            </router-link>
+        </div>
     </div>
 </template>

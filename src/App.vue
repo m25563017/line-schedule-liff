@@ -1,17 +1,42 @@
 <script setup>
-import { ref, onMounted, provide } from "vue";
+import { ref, onMounted, provide, watch, computed } from "vue";
 import liff from "@line/liff";
-import { useRouter, useRoute } from "vue-router";
+import { useNotify } from "@pieda/core";
+import { LIFF_ID } from "./config/liff";
+import { lineProfileRef } from "./lineProfile";
 
 const profile = ref(null);
 const isLiffReady = ref(false);
 const errorMessage = ref("");
-const router = useRouter();
-const route = useRoute();
+const $notify = useNotify();
+
+watch(
+    profile,
+    (v) => {
+        lineProfileRef.value = v;
+    },
+    { immediate: true },
+);
+
+const isLineLoggedIn = computed(() => !!profile.value);
+
+function loginLine() {
+    if (isDev) {
+        $notify.alert({
+            title: "開發模式",
+            message: "請在正式環境使用 LINE 登入。",
+            variant: "info",
+        });
+        return;
+    }
+    liff.login();
+}
 
 provide("userProfile", profile);
+provide("isLineLoggedIn", isLineLoggedIn);
+provide("loginLine", loginLine);
 
-const isDev = import.meta.env.DEV;
+const isDev = import.meta.env.DEV; // loginLine 於執行期讀取即可
 
 onMounted(async () => {
     try {
@@ -38,7 +63,7 @@ onMounted(async () => {
         }
 
         // 2. 正式環境 LIFF 初始化
-        await liff.init({ liffId: "2008922865-iLv6kFaA" });
+        await liff.init({ liffId: LIFF_ID });
 
         // 處理路由 hash (解決 LIFF 轉址問題)
         const path = window.location.pathname;
@@ -48,11 +73,8 @@ onMounted(async () => {
 
         if (liff.isLoggedIn()) {
             profile.value = await liff.getProfile();
-        } else {
-            liff.login();
         }
-
-        // 初始化成功
+        // 未登入仍可使用（訪客／機器人連結）；需加入或編輯時再呼叫 loginLine()
         isLiffReady.value = true;
     } catch (err) {
         // 捕捉錯誤

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, inject, computed } from "vue";
+import { ref, onMounted, inject, computed, watch } from "vue";
 import { useRoute } from "vue-router";
 import { db } from "../utils/firebase";
 import {
@@ -15,10 +15,18 @@ import { useNotify } from "@pieda/core";
 
 import InviteModal from "../components/InviteModal.vue";
 import EventCard from "../components/EventCard.vue";
+import { liffShareUrl } from "../config/liff";
+import {
+    getGuestVirtualMemberId,
+    setGuestVirtualMemberId,
+    resolveGuestVirtualMemberId,
+} from "../utils/guestView";
 
 const route = useRoute();
 const groupId = route.params.id;
 const userProfile = inject("userProfile");
+const isLineLoggedIn = inject("isLineLoggedIn");
+const loginLine = inject("loginLine");
 const group = ref(null);
 const events = ref([]);
 const loading = ref(true);
@@ -120,10 +128,40 @@ const canCreateEvent = computed(() => {
     return role === "editor" || role === "admin";
 });
 
-// 產生邀請網址 (InviteModal)
+// 產生邀請網址：一律用 liff.line.me，避免朋友用一般瀏覽器開 Firebase 網址而無法帶入 LINE 登入
 const inviteLink = computed(() => {
-    return `${window.location.origin}/#/group/${groupId}/join`;
+    return liffShareUrl(`/group/${groupId}/join`);
 });
+
+const virtualMembersForGuest = computed(() => {
+    if (!group.value) return [];
+    return Object.entries(group.value.members || {})
+        .filter(([, m]) => m.isVirtual)
+        .map(([id, m]) => ({ id, ...m }));
+});
+
+const guestPreviewId = ref("");
+
+watch(
+    [() => group.value, () => isLineLoggedIn.value, () => route.query.vm],
+    () => {
+        if (isLineLoggedIn.value) return;
+        if (!group.value) return;
+        const q = route.query.vm;
+        const preferred =
+            typeof q === "string" && q ? q : getGuestVirtualMemberId(groupId);
+        const resolved = resolveGuestVirtualMemberId(group.value, preferred);
+        guestPreviewId.value = resolved;
+        if (resolved) setGuestVirtualMemberId(groupId, resolved);
+    },
+    { immediate: true },
+);
+
+function onGuestVmChange(e) {
+    const id = e.target.value;
+    guestPreviewId.value = id;
+    setGuestVirtualMemberId(groupId, id);
+}
 
 onMounted(async () => {
     try {
@@ -206,7 +244,7 @@ onMounted(async () => {
             </router-link>
 
             <router-link
-                v-if="group.createdBy === userProfile?.userId"
+                v-if="isLineLoggedIn && group.createdBy === userProfile?.userId"
                 :to="`/group/${group.id}/edit`"
                 class="tw:absolute tw:top-4 tw:right-4 tw:bg-black/30 tw:text-white tw:p-2 tw:rounded-full tw:backdrop-blur-sm tw:flex tw:items-center tw:justify-center tw:w-10 tw:h-10 hover:tw:bg-black/50 tw:transition"
             >
@@ -227,6 +265,45 @@ onMounted(async () => {
         </div>
 
         <div class="tw:p-4 tw:space-y-4 tw:-mt-4 tw:relative tw:z-10">
+            <div
+                v-if="!isLineLoggedIn"
+                class="tw:bg-amber-50 tw:border tw:border-amber-200 tw:rounded-xl tw:p-4 tw:text-sm"
+            >
+                <p class="tw:font-bold tw:text-amber-900 tw:mb-2">訪客預覽</p>
+                <p class="tw:text-amber-800 tw:mb-3">
+                    可瀏覽群組與活動；若要填寫月曆或管理，請登入 LINE。
+                </p>
+                <div
+                    v-if="virtualMembersForGuest.length > 0"
+                    class="tw:space-y-2 tw:mb-3"
+                >
+                    <label
+                        class="tw:block tw:text-xs tw:font-bold tw:text-amber-900"
+                        >以誰的視角預覽（僅檢視）</label
+                    >
+                    <select
+                        :value="guestPreviewId"
+                        @change="onGuestVmChange"
+                        class="tw:w-full tw:p-2 tw:rounded-lg tw:border tw:border-amber-300 tw:bg-white tw:text-sm"
+                    >
+                        <option
+                            v-for="v in virtualMembersForGuest"
+                            :key="v.id"
+                            :value="v.id"
+                        >
+                            {{ v.displayName }}（預覽）
+                        </option>
+                    </select>
+                </div>
+                <button
+                    type="button"
+                    @click="loginLine"
+                    class="tw:w-full tw:bg-[#06C755] tw:text-white tw:py-2.5 tw:rounded-xl tw:font-bold tw:text-sm"
+                >
+                    使用 LINE 登入以加入／編輯
+                </button>
+            </div>
+
             <div
                 class="tw:bg-white tw:rounded-xl tw:shadow-sm tw:p-4 tw:grid tw:grid-cols-3 tw:gap-3"
             >
@@ -251,6 +328,7 @@ onMounted(async () => {
                     <span>發起活動</span>
                 </router-link>
                 <button
+                    v-if="isLineLoggedIn"
                     @click="showInviteModal = true"
                     class="tw:bg-gray-100 tw:text-gray-700 tw:rounded-lg tw:font-bold tw:flex tw:flex-col tw:items-center tw:justify-center tw:gap-1 tw:py-3 active:tw:scale-95 tw:transition"
                 >

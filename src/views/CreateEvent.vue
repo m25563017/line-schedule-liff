@@ -48,7 +48,12 @@ const targetMonths = computed(() => {
 const isSubmitting = ref(false);
 
 const handleCreate = async () => {
-    if (!title.value.trim()) return alert("請輸入活動標題");
+    if (!title.value.trim())
+        return $notify.alert({
+            title: "系統通知",
+            message: "請輸入活動標題",
+            variant: "info",
+        });
 
     isSubmitting.value = true;
     try {
@@ -76,7 +81,11 @@ const handleCreate = async () => {
         router.push(`/group/${groupId}/event/${docRef.id}`);
     } catch (e) {
         console.error("建立活動失敗", e);
-        alert("發生錯誤，請稍後再試");
+        $notify.alert({
+            title: "系統通知",
+            message: "發生錯誤，請稍後再試",
+            variant: "error",
+        });
     } finally {
         isSubmitting.value = false;
     }

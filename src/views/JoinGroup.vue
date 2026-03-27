@@ -11,14 +11,18 @@ import {
     deleteField,
 } from "firebase/firestore";
 import { useNotify } from "@pieda/core";
+import {
+    setGuestVirtualMemberId,
+    resolveGuestVirtualMemberId,
+} from "../utils/guestView";
 
 const route = useRoute();
 const router = useRouter();
 const userProfile = inject("userProfile");
+const isLineLoggedIn = inject("isLineLoggedIn");
+const loginLine = inject("loginLine");
 const $notify = useNotify();
 const groupId = route.params.id;
-
-console.log("目前登入的使用者：", userProfile.value);
 
 const group = ref(null);
 const loading = ref(true);
@@ -33,8 +37,15 @@ onMounted(async () => {
             group.value = { id: docSnap.id, ...docSnap.data() };
 
             // 如果已經在群組裡了，返回群組首頁
-            if (group.value.members[userProfile.value.userId]) {
-                alert("你已經在這個群組裡囉！");
+            if (
+                userProfile.value &&
+                group.value.members[userProfile.value.userId]
+            ) {
+                $notify.alert({
+                    title: "系統通知",
+                    message: "你已經在這個群組裡囉！",
+                    variant: "info",
+                });
                 router.push(`/group/${groupId}`);
             }
         } else {
@@ -60,8 +71,25 @@ const virtualMembers = computed(() => {
         .map(([id, m]) => ({ id, ...m }));
 });
 
+/** 訪客：僅預覽虛擬身分視角（不認領） */
+function previewAsGuest(virtualId) {
+    const resolved = resolveGuestVirtualMemberId(group.value, virtualId);
+    if (!resolved) return;
+    setGuestVirtualMemberId(groupId, resolved);
+    router.push({ path: `/group/${groupId}`, query: { vm: resolved } });
+}
+
 const handleJoin = async (virtualId) => {
     if (!virtualId) return; // 沒有選擇虛擬身分就拒絕執行
+    if (!userProfile.value) {
+        $notify.alert({
+            title: "系統通知",
+            message: "認領身分需先登入 LINE。",
+            variant: "info",
+        });
+        loginLine();
+        return;
+    }
 
     isSubmitting.value = true;
     try {
@@ -168,27 +196,42 @@ const handleJoin = async (virtualId) => {
                         主揪已經幫以下成員建立位置了，你是哪一位呢？
                     </h3>
                     <div class="tw:space-y-2 tw:mb-6">
-                        <button
+                        <div
                             v-for="v in virtualMembers"
                             :key="v.id"
-                            @click="handleJoin(v.id)"
-                            :disabled="isSubmitting"
-                            class="tw:w-full tw:flex tw:items-center tw:gap-3 tw:p-3 tw:border tw:border-primary/30 tw:rounded-xl hover:tw:bg-primary/5 tw:transition tw:text-left disabled:tw:opacity-50"
+                            class="tw:flex tw:flex-col tw:gap-2 tw:p-3 tw:border tw:border-primary/30 tw:rounded-xl tw:bg-white"
                         >
-                            <div
-                                class="tw:w-10 tw:h-10 tw:rounded-full tw:bg-primary/20 tw:flex tw:items-center tw:justify-center tw:text-primary tw:font-bold"
-                            >
-                                {{ v.displayName.charAt(0) }}
-                            </div>
-                            <div class="tw:flex-1">
-                                <div class="tw:font-bold tw:text-gray-800">
-                                    我是 {{ v.displayName }}
+                            <div class="tw:flex tw:items-center tw:gap-3">
+                                <div
+                                    class="tw:w-10 tw:h-10 tw:rounded-full tw:bg-primary/20 tw:flex tw:items-center tw:justify-center tw:text-primary tw:font-bold tw:shrink-0"
+                                >
+                                    {{ v.displayName.charAt(0) }}
                                 </div>
-                                <div class="tw:text-xs tw:text-gray-500">
-                                    點擊認領此身分與月曆紀錄
+                                <div class="tw:flex-1 tw:min-w-0">
+                                    <div class="tw:font-bold tw:text-gray-800">
+                                        {{ v.displayName }}
+                                    </div>
                                 </div>
                             </div>
-                        </button>
+                            <div class="tw:flex tw:gap-2 tw:flex-wrap">
+                                <button
+                                    v-if="!isLineLoggedIn"
+                                    type="button"
+                                    @click="previewAsGuest(v.id)"
+                                    class="tw:flex-1 tw:min-w-[120px] tw:py-2 tw:px-3 tw:rounded-lg tw:border tw:border-gray-300 tw:text-gray-700 tw:text-sm tw:font-bold hover:tw:bg-gray-50"
+                                >
+                                    先預覽（僅檢視）
+                                </button>
+                                <button
+                                    type="button"
+                                    @click="handleJoin(v.id)"
+                                    :disabled="isSubmitting"
+                                    class="tw:flex-1 tw:min-w-[120px] tw:py-2 tw:px-3 tw:rounded-lg tw:bg-primary tw:text-white tw:text-sm tw:font-bold disabled:tw:opacity-50"
+                                >
+                                    加入一起選日子！
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
                     <div
@@ -197,23 +240,10 @@ const handleJoin = async (virtualId) => {
                         <p class="tw:text-xs tw:text-gray-400">
                             上面沒有你的名字嗎？<br />請聯繫主揪先把你加入名單喔！
                         </p>
-                        <svg
-                            class="tw:w-12 tw:h-12"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke-width="1.5"
-                            stroke="currentColor"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
-                            />
-                        </svg>
                     </div>
                 </div>
 
-                <div v-else class="tw:text-center tw:py-4">
+                <div v-else class="tw:flex-center tw:py-4">
                     <svg
                         class="tw:w-12 tw:h-12"
                         fill="none"

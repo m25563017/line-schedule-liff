@@ -1,6 +1,6 @@
 <script setup>
 import { ref, inject, onMounted, computed, watch } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { useRoute } from "vue-router";
 import { db } from "../utils/firebase";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { useNotify } from "@pieda/core";
@@ -8,10 +8,17 @@ import EventCalendar from "../components/EventCalendar.vue";
 import EventStats from "../components/EventStats.vue";
 import DecideModal from "../components/DecideModal.vue";
 import { addGroupActivityLog } from "../utils/activityLog";
+import { liffShareUrl } from "../config/liff";
+import {
+    getGuestVirtualMemberId,
+    setGuestVirtualMemberId,
+    resolveGuestVirtualMemberId,
+} from "../utils/guestView";
 
 const route = useRoute();
-const router = useRouter();
 const userProfile = inject("userProfile");
+const isLineLoggedIn = inject("isLineLoggedIn");
+const loginLine = inject("loginLine");
 const groupId = route.params.id;
 const eventId = route.params.eventId;
 const $notify = useNotify();
@@ -38,7 +45,6 @@ onMounted(async () => {
             event.value = { id: eventSnap.id, ...eventSnap.data() };
             availabilities.value = event.value.availabilities || {};
         }
-        if (userProfile.value) selectedUserId.value = userProfile.value.userId;
     } catch (e) {
         console.error(e);
     } finally {
@@ -50,6 +56,50 @@ watch(selectedUserId, (newId) => {
     if (newId && isEditing.value)
         tempDates.value = [...(availabilities.value[newId] || [])];
 });
+
+const isGuestMode = computed(() => !userProfile.value);
+
+const guestViewAsId = ref("");
+
+const virtualMembersList = computed(() => {
+    if (!group.value) return [];
+    return Object.entries(group.value.members || {})
+        .filter(([, m]) => m.isVirtual)
+        .map(([id, m]) => ({ id, displayName: m.displayName }));
+});
+
+watch(
+    () => [group.value, isLineLoggedIn.value, route.query.vm],
+    () => {
+        if (!group.value) return;
+        if (isLineLoggedIn.value && userProfile.value) {
+            selectedUserId.value = userProfile.value.userId;
+            return;
+        }
+        const q = route.query.vm;
+        const preferred =
+            typeof q === "string" && q ? q : getGuestVirtualMemberId(groupId);
+        const resolved = resolveGuestVirtualMemberId(group.value, preferred);
+        guestViewAsId.value = resolved;
+        if (resolved) {
+            setGuestVirtualMemberId(groupId, resolved);
+            selectedUserId.value = resolved;
+        }
+    },
+    { immediate: true },
+);
+
+/** 登入時為 LINE userId；訪客時為預覽中的虛擬成員 id */
+const viewAsUserId = computed(
+    () => userProfile.value?.userId || guestViewAsId.value || "",
+);
+
+function onGuestVmSelect(e) {
+    const id = e.target.value;
+    guestViewAsId.value = id;
+    setGuestVirtualMemberId(groupId, id);
+    selectedUserId.value = id;
+}
 
 // --- 計算邏輯 ---
 const memberMap = computed(() => {
@@ -67,17 +117,21 @@ const currentMemberRole = computed(() => {
     return group.value.members?.[currentUserId.value]?.role || "viewer";
 });
 const isGroupOwner = computed(
-    () => group.value?.createdBy === currentUserId.value,
+    () => !!userProfile.value && group.value?.createdBy === currentUserId.value,
 );
 const isEventOwner = computed(
-    () => event.value?.createdBy === currentUserId.value,
+    () => !!userProfile.value && event.value?.createdBy === currentUserId.value,
 );
+/** 訪客一律僅檢視，不因虛擬成員在 DB 中的 role 而取得管理權 */
 const canManageEvent = computed(
-    () => isGroupOwner.value || isEventOwner.value,
+    () => !isGuestMode.value && (isGroupOwner.value || isEventOwner.value),
 );
-const canFinalizeEvent = canManageEvent;
+/** 僅活動發起人可決定定案日期（群組管理員代填不代表可定案） */
+const canDecideFinalDate = computed(
+    () => !isGuestMode.value && isEventOwner.value,
+);
 const managedUsers = computed(() => {
-    if (!group.value || !userProfile.value) return [];
+    if (!group.value || !userProfile.value || isGuestMode.value) return [];
     const me = { id: userProfile.value.userId, name: "我自己" };
     // 群組建立者或活動建立者可以幫虛擬成員代填
     if (isGroupOwner.value || isEventOwner.value) {
@@ -95,7 +149,7 @@ const respondedUsers = computed(() =>
         .map((uid) => memberMap.value[uid]),
 );
 
-// 🌟 未填寫名單 (待會防呆會用到)
+// 未填寫名單
 const pendingUsers = computed(() =>
     Object.keys(memberMap.value)
         .filter((uid) => !(availabilities.value[uid] || []).length > 0)
@@ -142,6 +196,7 @@ const calendarDays = computed(() => {
 });
 
 const startEditing = () => {
+    if (isGuestMode.value) return;
     isEditing.value = true;
     focusedDate.value = null;
     tempDates.value = [...(availabilities.value[selectedUserId.value] || [])];
@@ -152,7 +207,13 @@ const stopEditing = () => {
 };
 const toggleDate = (dateStr) => {
     focusedDate.value = dateStr;
-    if (!isEditing.value || !selectedUserId.value || isFinalized.value) return;
+    if (
+        isGuestMode.value ||
+        !isEditing.value ||
+        !selectedUserId.value ||
+        isFinalized.value
+    )
+        return;
     const idx = tempDates.value.indexOf(dateStr);
     if (idx === -1) tempDates.value.push(dateStr);
     else tempDates.value.splice(idx, 1);
@@ -162,9 +223,7 @@ const isSelectedByMe = (dateStr) =>
         ? event.value.finalDate === dateStr
         : isEditing.value
           ? tempDates.value.includes(dateStr)
-          : (availabilities.value[userProfile.value?.userId] || []).includes(
-                dateStr,
-            );
+          : (availabilities.value[viewAsUserId.value] || []).includes(dateStr);
 
 const getAvailableUsersForDate = (dateStr) => {
     const users = [];
@@ -188,8 +247,9 @@ const openDecideModal = () => {
     showDecideModal.value = true;
 };
 
-// 🚀 新增：點擊「決定日期」時的防呆檢查
+//新增：點擊「決定日期」時的防呆檢查
 const handleDecideClick = () => {
+    if (!canDecideFinalDate.value) return;
     if (pendingUsers.value.length > 0) {
         const names = pendingUsers.value.map((u) => u.displayName).join("、");
 
@@ -214,6 +274,7 @@ const handleDecideClick = () => {
 
 // payload 為 { date, time } 或舊版字串 date
 const confirmFinalDate = async (payload) => {
+    if (!canDecideFinalDate.value) return;
     const date = typeof payload === "string" ? payload : payload?.date;
     const time =
         typeof payload === "object" && payload?.time != null
@@ -257,7 +318,7 @@ const confirmFinalDate = async (payload) => {
 function getEventPageUrl() {
     const gid = route.params.id;
     const eid = route.params.eventId;
-    return `${window.location.origin}${window.location.pathname || ""}#/group/${gid}/event/${eid}`;
+    return liffShareUrl(`/group/${gid}/event/${eid}`);
 }
 
 function getRemindText() {
@@ -358,7 +419,7 @@ async function shareFinalizedToLine() {
 
 const isSaving = ref(false);
 const saveChanges = async () => {
-    if (!selectedUserId.value) return;
+    if (isGuestMode.value || !selectedUserId.value) return;
     isSaving.value = true;
     try {
         const targetId = selectedUserId.value;
@@ -393,7 +454,11 @@ const saveChanges = async () => {
 
         isEditing.value = false;
     } catch (e) {
-        alert("儲存失敗");
+        $notify.alert({
+            title: "系統通知",
+            message: "儲存失敗",
+            variant: "error",
+        });
     } finally {
         isSaving.value = false;
     }
@@ -454,7 +519,7 @@ const saveChanges = async () => {
             </h1>
 
             <router-link
-                v-if="canManageEvent && !isEditing"
+                v-if="canManageEvent && !isEditing && !isGuestMode"
                 :to="`/group/${groupId}/event/${eventId}/edit`"
                 class="tw:absolute tw:right-4 tw:top-4 tw:text-gray-400 hover:tw:text-gray-700 tw:transition active:tw:scale-90"
                 title="活動設定"
@@ -483,6 +548,41 @@ const saveChanges = async () => {
         <div
             class="tw:flex-1 tw:p-4 tw:max-w-md tw:mx-auto tw:w-full tw:overflow-y-auto tw:pb-24"
         >
+            <div
+                v-if="isGuestMode"
+                class="tw:mb-4 tw:bg-amber-50 tw:border tw:border-amber-200 tw:rounded-xl tw:p-3 tw:text-sm tw:text-amber-900"
+            >
+                <p class="tw:font-bold tw:mb-1">訪客預覽（未登入 LINE）</p>
+                <p class="tw:text-amber-800 tw:mb-2">
+                    目前以虛擬名額視角檢視；無法填寫、定案或管理活動。
+                </p>
+                <div v-if="virtualMembersList.length > 1" class="tw:mb-2">
+                    <label class="tw:block tw:text-xs tw:font-bold tw:mb-1"
+                        >切換預覽身分</label
+                    >
+                    <select
+                        :value="guestViewAsId"
+                        @change="onGuestVmSelect"
+                        class="tw:w-full tw:p-2 tw:rounded-lg tw:border tw:border-amber-300 tw:bg-white tw:text-sm"
+                    >
+                        <option
+                            v-for="v in virtualMembersList"
+                            :key="v.id"
+                            :value="v.id"
+                        >
+                            {{ v.displayName }}
+                        </option>
+                    </select>
+                </div>
+                <router-link
+                    v-if="!guestViewAsId && virtualMembersList.length === 0"
+                    :to="`/group/${groupId}`"
+                    class="tw:inline-block tw:text-primary tw:font-bold tw:underline"
+                >
+                    回群組頁設定預覽身分
+                </router-link>
+            </div>
+
             <div
                 v-if="isFinalized"
                 class="tw:bg-accent tw:text-white tw:p-4 tw:rounded-xl tw:shadow-md tw:mb-4 tw:text-center tw:animate-fade-in"
@@ -619,9 +719,7 @@ const saveChanges = async () => {
             >
                 <p class="tw:text-sm tw:text-gray-600 tw:mb-3">
                     尚有
-                    {{
-                        pendingUserIdsWithLine.length
-                    }}
+                    {{ pendingUserIdsWithLine.length }}
                     位成員未填寫，點下方按鈕可選擇 LINE 聊天室或群組發送提醒
                 </p>
                 <button
@@ -674,48 +772,60 @@ const saveChanges = async () => {
             v-else-if="!isEditing && !isFinalized"
             class="tw:fixed tw:bottom-0 tw:left-0 tw:w-full tw:bg-white tw:border-t tw:border-gray-200 tw:shadow-lg tw:p-4 tw:flex tw:gap-3 tw:z-50 tw:animate-slide-up"
         >
+            <template v-if="!isGuestMode">
+                <button
+                    type="button"
+                    :disabled="!canDecideFinalDate"
+                    :title="canDecideFinalDate ? '' : '僅活動發起人可決定日期'"
+                    @click="handleDecideClick"
+                    class="tw:flex-1 tw:py-3.5 tw:rounded-xl tw:font-bold tw:shadow-md tw:transition tw:flex tw:items-center tw:justify-center disabled:tw:cursor-not-allowed disabled:tw:bg-gray-200 disabled:tw:text-gray-400 disabled:tw:shadow-none tw:bg-accent tw:text-white active:tw:scale-95 disabled:active:tw:scale-100"
+                >
+                    <span class="tw:inline-flex tw:items-center tw:gap-1">
+                        <svg
+                            class="tw:w-4 tw:h-4"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="1.8"
+                        >
+                            <path
+                                d="M4 10l2.5-4 3 3 2.5-5 2.5 5 3-3L20 10l-2 9H6l-2-9z"
+                                fill="currentColor"
+                                stroke-linejoin="round"
+                            />
+                        </svg>
+                        <span>決定日期</span>
+                    </span>
+                </button>
+                <button
+                    @click="startEditing"
+                    class="tw:flex-2 tw:bg-primary tw:text-white tw:py-3.5 tw:rounded-xl tw:font-bold tw:text-lg tw:shadow-md active:tw:scale-95 tw:transition"
+                >
+                    <span class="tw:inline-flex tw:items-center tw:gap-2">
+                        <span>我要選日子</span>
+                        <svg
+                            class="tw:w-4 tw:h-4"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                        >
+                            <path
+                                d="M16.862 3.487l3.651 3.651M4 20l3.5-.5L19 8.5 15.5 5 4.5 15.5 4 20z"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            />
+                        </svg>
+                    </span>
+                </button>
+            </template>
             <button
-                v-if="canFinalizeEvent"
-                @click="handleDecideClick"
-                class="tw:flex-1 tw:bg-accent tw:text-white tw:py-3.5 tw:rounded-xl tw:font-bold tw:shadow-md active:tw:scale-95 tw:transition"
+                v-else
+                type="button"
+                @click="loginLine"
+                class="tw:w-full tw:bg-[#06C755] tw:text-white tw:py-3.5 tw:rounded-xl tw:font-bold tw:text-lg tw:shadow-md active:tw:scale-95 tw:transition"
             >
-                <span class="tw:inline-flex tw:items-center tw:gap-1">
-                    <svg
-                        class="tw:w-4 tw:h-4"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="1.8"
-                    >
-                        <path
-                            d="M4 10l2.5-4 3 3 2.5-5 2.5 5 3-3L20 10l-2 9H6l-2-9z"
-                            fill="currentColor"
-                            stroke-linejoin="round"
-                        />
-                    </svg>
-                    <span>決定日期</span>
-                </span>
-            </button>
-            <button
-                @click="startEditing"
-                class="tw:flex-2 tw:bg-primary tw:text-white tw:py-3.5 tw:rounded-xl tw:font-bold tw:text-lg tw:shadow-md active:tw:scale-95 tw:transition"
-            >
-                <span class="tw:inline-flex tw:items-center tw:gap-2">
-                    <span>我要選日子</span>
-                    <svg
-                        class="tw:w-4 tw:h-4"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                    >
-                        <path
-                            d="M16.862 3.487l3.651 3.651M4 20l3.5-.5L19 8.5 15.5 5 4.5 15.5 4 20z"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                        />
-                    </svg>
-                </span>
+                登入跟朋友一起選日子！
             </button>
         </div>
 

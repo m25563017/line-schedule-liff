@@ -2,6 +2,7 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
+import { getAuth, signInAnonymously } from "firebase/auth";
 
 const firebaseConfig = {
     apiKey: "AIzaSyD1-uxu9eHmt0JJSZeWOxZTHs_Dl9oUypQ",
@@ -16,5 +17,20 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const storage = getStorage(app);
+const auth = getAuth(app);
 
-export { db, storage };
+let _authReadyPromise = null;
+async function ensureSignedIn() {
+  if (auth.currentUser) return auth.currentUser;
+  if (_authReadyPromise) return (await _authReadyPromise).user;
+
+  _authReadyPromise = signInAnonymously(auth);
+  try {
+    const cred = await _authReadyPromise;
+    return cred.user;
+  } finally {
+    _authReadyPromise = null;
+  }
+}
+
+export { db, storage, auth, ensureSignedIn };

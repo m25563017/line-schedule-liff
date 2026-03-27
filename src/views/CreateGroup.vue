@@ -1,7 +1,7 @@
 <script setup>
 import { ref, inject, onMounted } from "vue";
 import { useRouter } from "vue-router";
-import { db, storage } from "../utils/firebase";
+import { db, storage, ensureSignedIn } from "../utils/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import {
     ref as storageRef,
@@ -24,6 +24,9 @@ const newMemberName = ref("");
 const newMemberRole = ref("editor");
 const members = ref([]);
 
+/** 群組至少需 2 人（含建立者）；於建立送出時檢查 */
+const MIN_GROUP_MEMBERS = 2;
+
 // 初始化：把自己加入名單 (作為第一個成員)
 onMounted(() => {
     if (userProfile.value) {
@@ -38,7 +41,12 @@ onMounted(() => {
 });
 
 const addVirtualMember = () => {
-    if (!newMemberName.value.trim()) return alert("請輸入成員名字");
+    if (!newMemberName.value.trim())
+        return $notify.alert({
+            title: "系統通知",
+            message: "請輸入成員名字",
+            variant: "info",
+        });
 
     members.value.push({
         id: `virtual_${Date.now()}`,
@@ -89,12 +97,19 @@ const handleCreate = async () => {
             message: "請先登入",
             variant: "info",
         });
+    if (members.value.length < MIN_GROUP_MEMBERS)
+        return $notify.alert({
+            title: "系統通知",
+            message: "群組成員至少要有兩位喔！",
+            variant: "info",
+        });
 
     isSubmitting.value = true;
 
     try {
         let imageUrl = "";
         if (groupImageFile.value) {
+            await ensureSignedIn();
             const fileName = `group_covers/${Date.now()}_${groupImageFile.value.name}`;
             const imageRef = storageRef(storage, fileName);
             const snapshot = await uploadBytes(imageRef, groupImageFile.value);
@@ -175,7 +190,10 @@ const handleCreate = async () => {
                             :src="previewImage"
                             class="tw:absolute tw:inset-0 tw:w-full tw:h-full tw:object-cover"
                         />
-                        <div v-else class="tw:text-center tw:text-gray-400">
+                        <div
+                            v-else
+                            class="tw:flex tw:flex-col tw:items-center tw:justify-center tw:text-gray-400"
+                        >
                             <svg
                                 class="tw:w-6 tw:h-6"
                                 fill="none"
@@ -346,7 +364,13 @@ const handleCreate = async () => {
                     </div>
 
                     <p
-                        class="tw:text-xs tw:text-gray-400 tw:mt-4 tw:px-1 tw:leading-relaxed"
+                        class="tw:text-xs tw:text-amber-700 tw:mt-3 tw:px-1 tw:leading-relaxed tw:bg-amber-50 tw:rounded-lg tw:p-2 tw:border tw:border-amber-100"
+                    >
+                        群組至少需要 2
+                        位成員（含你）；請新增至少一位虛擬成員或等朋友加入後再建立。
+                    </p>
+                    <p
+                        class="tw:text-xs tw:text-gray-400 tw:mt-3 tw:px-1 tw:leading-relaxed"
                     >
                         *
                         虛擬成員之後可透過分享連結，讓真實的朋友加入並取代其位置。

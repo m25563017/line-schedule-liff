@@ -1,7 +1,7 @@
 <script setup>
 import { ref, inject, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { db, storage } from "../utils/firebase";
+import { db, storage, ensureSignedIn } from "../utils/firebase";
 import {
     doc,
     getDoc,
@@ -28,6 +28,9 @@ const previewImage = ref(null);
 const members = ref([]);
 const isSubmitting = ref(false);
 const loading = ref(true);
+
+/** 群組至少需 2 人，避免只剩一位成員（於儲存時檢查並提示） */
+const MIN_GROUP_MEMBERS = 2;
 
 // 新增成員專用
 const newMemberName = ref("");
@@ -145,12 +148,19 @@ const handleUpdate = async () => {
             message: "請輸入群組名稱",
             variant: "info",
         });
+    if (members.value.length < MIN_GROUP_MEMBERS)
+        return $notify.alert({
+            title: "系統通知",
+            message: "群組成員至少要有兩位喔！",
+            variant: "info",
+        });
     isSubmitting.value = true;
 
     try {
         let imageUrl = previewImage.value;
 
         if (groupImageFile.value) {
+            await ensureSignedIn();
             const fileName = `group_covers/${Date.now()}_${groupImageFile.value.name}`;
             const imageRef = storageRef(storage, fileName);
             const snapshot = await uploadBytes(imageRef, groupImageFile.value);
