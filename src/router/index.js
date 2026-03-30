@@ -8,6 +8,7 @@ import EditGroup from "../views/EditGroup.vue";
 import JoinGroup from "../views/JoinGroup.vue";
 import EditEvent from "../views/EditEvent.vue";
 import GroupMembers from "../views/GroupMembers.vue";
+import { lineProfileRef } from "../lineProfile";
 
 const routes = [
     { path: "/", redirect: "/list" },
@@ -20,6 +21,11 @@ const routes = [
         path: "/create",
         name: "CreateGroup",
         component: CreateGroup,
+        meta: { requiresLineAuth: true },
+    },
+    {
+        path: "/help",
+        redirect: { name: "GroupList", query: { help: "1" } },
     },
     {
         path: "/group/:id/join",
@@ -30,6 +36,7 @@ const routes = [
         path: "/group/:id/edit",
         name: "EditGroup",
         component: EditGroup,
+        meta: { requiresLineAuth: true },
     },
     {
         path: "/group/:id",
@@ -45,6 +52,7 @@ const routes = [
         path: "/group/:id/create-event",
         name: "CreateEvent",
         component: CreateEvent,
+        meta: { requiresLineAuth: true },
     },
 
     {
@@ -57,6 +65,7 @@ const routes = [
         path: "/group/:id/event/:eventId/edit",
         name: "EditEvent",
         component: EditEvent,
+        meta: { requiresLineAuth: true },
     },
 
     //防呆
@@ -66,6 +75,13 @@ const routes = [
 const router = createRouter({
     history: createWebHashHistory(),
     routes,
+});
+
+router.beforeEach((to) => {
+    if (!to.meta?.requiresLineAuth) return true;
+    if (lineProfileRef.value) return true;
+    if (to.params?.id) return { path: `/group/${to.params.id}`, replace: true };
+    return { path: "/list", replace: true };
 });
 
 export default router;

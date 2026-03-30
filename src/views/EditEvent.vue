@@ -321,7 +321,7 @@ const handleDeleteEvent = () => {
                     <div>
                         <label
                             class="tw:block tw:font-bold tw:text-gray-700 tw:mb-2"
-                            >開放選擇區間</label
+                            >連續開放幾個月</label
                         >
                         <select
                             v-model="monthCount"
@@ -331,6 +331,10 @@ const handleDeleteEvent = () => {
                             <option :value="2">2 個月</option>
                             <option :value="3">3 個月</option>
                         </select>
+                        <p class="tw:text-xs tw:text-gray-500 tw:mt-2 tw:leading-relaxed">
+                            決定成員在行事曆上可勾選哪幾個月（1～3
+                            個月），與「幾號前要填完」的期限無關。
+                        </p>
                     </div>
 
                     <div

@@ -333,13 +333,185 @@ function getFinalizedText() {
     return `【${event.value?.title || "活動"}】已定案：${dateStr}${timeStr}\n${url}`;
 }
 
-async function shareViaLineShareTargetPicker(text) {
+/** 與 InviteModal 相同；LINE Flex 圖片須為可公開的 HTTPS */
+const FLEX_HERO_PLACEHOLDER =
+    "https://via.placeholder.com/800x400/508974/FFFFFF?text=Event";
+const FLEX_AVATAR_PLACEHOLDER =
+    "https://via.placeholder.com/80x80/508974/FFFFFF?text=U";
+
+/** 參考付款卡版型：主按鈕與裝飾條 */
+const FLEX_SHARE_GREEN = "#58C48E";
+/** 大字強調區（對應參考圖金額列） */
+const FLEX_DATE_ACCENT = "#EF5350";
+
+/** 參考圖中「遞減綠條」裝飾 */
+function flexShareDecoBars() {
+    return {
+        type: "box",
+        layout: "vertical",
+        spacing: "4px",
+        margin: "xl",
+        width: "100%",
+        contents: [
+            {
+                type: "box",
+                height: "3px",
+                width: "100%",
+                backgroundColor: FLEX_SHARE_GREEN,
+            },
+            {
+                type: "box",
+                height: "3px",
+                width: "72%",
+                backgroundColor: FLEX_SHARE_GREEN,
+            },
+            {
+                type: "box",
+                height: "3px",
+                width: "48%",
+                backgroundColor: FLEX_SHARE_GREEN,
+            },
+            {
+                type: "box",
+                height: "3px",
+                width: "24%",
+                backgroundColor: FLEX_SHARE_GREEN,
+            },
+        ],
+    };
+}
+
+/**
+ * 給 liff.shareTargetPicker 用的 Flex Message（格式同 Messaging API）。
+ * 版型：群組封面 hero → 活動名稱 → 說明 → 大字日期 → 綠條 → 發送者 → 綠色主按鈕。
+ */
+function getFinalizedFlexMessage() {
+    const url = getEventPageUrl();
+    const title = event.value?.title || "活動";
+    const dateStr = event.value?.finalDate?.replace(/-/g, "/") || "";
+    const timeStr = event.value?.finalTime ? ` ${event.value.finalTime}` : "";
+    const scheduleLine = dateStr
+        ? `${dateStr}${timeStr}`.trim()
+        : "（日期待確認）";
+    const groupName = group.value?.name || "";
+    let altText = getFinalizedText();
+    if (altText.length > 400) altText = `${altText.slice(0, 397)}...`;
+
+    const heroUrl = group.value?.coverUrl || FLEX_HERO_PLACEHOLDER;
+
+    const senderName =
+        userProfile.value?.displayName?.trim() || "成員";
+    const avatarUrl =
+        userProfile.value?.pictureUrl &&
+        String(userProfile.value.pictureUrl).startsWith("https://")
+            ? userProfile.value.pictureUrl
+            : FLEX_AVATAR_PLACEHOLDER;
+
+    const bodyContents = [
+        {
+            type: "text",
+            text: title,
+            weight: "bold",
+            size: "xl",
+            color: "#111111",
+            wrap: true,
+        },
+        ...(groupName
+            ? [
+                  {
+                      type: "text",
+                      text: groupName,
+                      size: "sm",
+                      color: "#666666",
+                      margin: "md",
+                      wrap: true,
+                  },
+              ]
+            : []),
+        {
+            type: "text",
+            text: scheduleLine,
+            size: "xxl",
+            weight: "bold",
+            color: FLEX_DATE_ACCENT,
+            margin: "lg",
+            wrap: true,
+        },
+        flexShareDecoBars(),
+        {
+            type: "box",
+            layout: "horizontal",
+            spacing: "md",
+            contents: [
+                {
+                    type: "image",
+                    url: avatarUrl,
+                    size: "xs",
+                    aspectRatio: "1:1",
+                    aspectMode: "cover",
+                },
+                {
+                    type: "text",
+                    text: senderName,
+                    size: "sm",
+                    color: "#333333",
+                    gravity: "center",
+                    flex: 1,
+                    wrap: true,
+                },
+            ],
+        },
+    ];
+
+    return {
+        type: "flex",
+        altText,
+        contents: {
+            type: "bubble",
+            hero: {
+                type: "image",
+                url: heroUrl,
+                size: "full",
+                aspectRatio: "20:13",
+                aspectMode: "cover",
+            },
+            body: {
+                type: "box",
+                layout: "vertical",
+                paddingAll: "lg",
+                contents: bodyContents,
+            },
+            footer: {
+                type: "box",
+                layout: "vertical",
+                spacing: "sm",
+                contents: [
+                    {
+                        type: "button",
+                        style: "primary",
+                        color: FLEX_SHARE_GREEN,
+                        height: "md",
+                        action: {
+                            type: "uri",
+                            label: "開啟活動頁面",
+                            uri: url,
+                        },
+                    },
+                ],
+                flex: 0,
+            },
+        },
+    };
+}
+
+/** @param {import("@line/liff").ShareTargetPickerMessage[]} messages */
+async function shareViaLineShareTargetPicker(messages) {
     if (
         typeof window !== "undefined" &&
         window.liff?.isApiAvailable?.("shareTargetPicker")
     ) {
         try {
-            await window.liff.shareTargetPicker([{ type: "text", text }]);
+            await window.liff.shareTargetPicker(messages);
             return true;
         } catch (e) {
             if (
@@ -374,11 +546,13 @@ async function copyToClipboard(text, successMessage) {
 async function shareRemindToLine() {
     const text = getRemindText();
     try {
-        const sent = await shareViaLineShareTargetPicker(text);
+        const sent = await shareViaLineShareTargetPicker([
+            { type: "text", text },
+        ]);
         if (sent === true) {
             $notify.alert({
                 title: "系統通知",
-                message: "已發送到所選的聊天室（由你的帳號發出）。",
+                message: "已發送到所選的聊天室。",
                 variant: "success",
             });
             return;
@@ -397,7 +571,9 @@ async function shareRemindToLine() {
 async function shareFinalizedToLine() {
     const text = getFinalizedText();
     try {
-        const sent = await shareViaLineShareTargetPicker(text);
+        const sent = await shareViaLineShareTargetPicker([
+            getFinalizedFlexMessage(),
+        ]);
         if (sent === true) {
             $notify.alert({
                 title: "系統通知",
@@ -466,15 +642,19 @@ const saveChanges = async () => {
 </script>
 
 <template>
-    <div v-if="loading" class="tw:p-10 tw:text-center tw:text-gray-500">
+    <!-- 填滿 App 內 main（relative），避免 h-full 在 overflow-y-auto 祖先內失效、footer 被捲出視窗 -->
+    <div
+        v-if="loading"
+        class="tw:absolute tw:inset-0 tw:z-0 tw:flex tw:items-center tw:justify-center tw:bg-gray-50 tw:p-10 tw:text-center tw:text-gray-500"
+    >
         載入活動中...
     </div>
     <div
         v-else-if="event && group"
-        class="tw:min-h-full tw:bg-gray-50 tw:flex tw:flex-col"
+        class="tw:absolute tw:inset-0 tw:z-0 tw:flex tw:flex-col tw:overflow-hidden tw:bg-gray-50"
     >
         <div
-            class="tw:bg-white tw:p-4 tw:text-center tw:shadow-sm tw:relative tw:flex-none tw:z-10"
+            class="header-container tw:bg-white tw:p-4 tw:text-center tw:shadow-sm tw:relative tw:flex-none tw:shrink-0 tw:z-10"
         >
             <router-link
                 v-if="!isEditing"
@@ -546,186 +726,222 @@ const saveChanges = async () => {
         </div>
 
         <div
-            class="tw:flex-1 tw:p-4 tw:max-w-md tw:mx-auto tw:w-full tw:overflow-y-auto tw:pb-24"
+            class="body-container tw:flex-1 tw:min-h-0 tw:w-full tw:overflow-hidden"
         >
             <div
-                v-if="isGuestMode"
-                class="tw:mb-4 tw:bg-amber-50 tw:border tw:border-amber-200 tw:rounded-xl tw:p-3 tw:text-sm tw:text-amber-900"
+                class="body-container-inner tw:h-full tw:min-h-0 tw:overflow-y-auto tw:p-4 tw:max-w-md tw:mx-auto tw:w-full"
             >
-                <p class="tw:font-bold tw:mb-1">訪客預覽（未登入 LINE）</p>
-                <p class="tw:text-amber-800 tw:mb-2">
-                    目前以虛擬名額視角檢視；無法填寫、定案或管理活動。
-                </p>
-                <div v-if="virtualMembersList.length > 1" class="tw:mb-2">
-                    <label class="tw:block tw:text-xs tw:font-bold tw:mb-1"
-                        >切換預覽身分</label
+                <div
+                    v-if="isGuestMode"
+                    class="tw:mb-4 tw:bg-amber-50 tw:border tw:border-amber-200 tw:rounded-xl tw:p-3 tw:text-sm tw:text-amber-900"
+                >
+                    <p class="tw:font-bold tw:mb-1">訪客預覽（未登入 LINE）</p>
+                    <p class="tw:text-amber-800 tw:mb-2">
+                        目前以虛擬名額視角檢視；無法填寫、定案或管理活動。
+                    </p>
+                    <div
+                        v-if="virtualMembersList.length > 1"
+                        class="tw:mb-2"
                     >
+                        <label class="tw:block tw:text-xs tw:font-bold tw:mb-1"
+                            >切換預覽身分</label
+                        >
+                        <select
+                            :value="guestViewAsId"
+                            @change="onGuestVmSelect"
+                            class="tw:w-full tw:p-2 tw:rounded-lg tw:border tw:border-amber-300 tw:bg-white tw:text-sm"
+                        >
+                            <option
+                                v-for="v in virtualMembersList"
+                                :key="v.id"
+                                :value="v.id"
+                            >
+                                {{ v.displayName }}
+                            </option>
+                        </select>
+                    </div>
+                    <router-link
+                        v-if="!guestViewAsId && virtualMembersList.length === 0"
+                        :to="`/group/${groupId}`"
+                        class="tw:inline-block tw:text-primary tw:font-bold tw:underline"
+                    >
+                        回群組頁設定預覽身分
+                    </router-link>
+                </div>
+
+                <div
+                    v-if="isFinalized"
+                    class="tw:bg-accent tw:text-white tw:p-4 tw:rounded-xl tw:shadow-md tw:mb-4 tw:text-center tw:animate-fade-in"
+                >
+                    <div class="tw:text-sm tw:font-medium tw:opacity-90">
+                        活動日期已定案
+                    </div>
+                    <div
+                        class="tw:text-2xl tw:font-black tw:tracking-wider tw:mt-1"
+                    >
+                        {{ event.finalDate.replace(/-/g, " / ") }}
+                        <span
+                            v-if="event.finalTime"
+                            class="tw:block tw:text-lg tw:mt-1 tw:opacity-90"
+                        >
+                            {{ event.finalTime }}
+                        </span>
+                    </div>
+                </div>
+
+                <div
+                    v-if="isEditing && managedUsers.length > 1"
+                    class="tw:mb-4 tw:bg-yellow-50 tw:border tw:border-yellow-200 tw:p-3 tw:rounded-xl tw:animate-fade-in"
+                >
+                    <label
+                        class="tw:block tw:text-xs tw:font-bold tw:text-yellow-800 tw:mb-1"
+                    >
+                        <span
+                            class="tw:inline-flex tw:items-center tw:justify-center tw:w-4 tw:h-4 tw:mr-1"
+                        >
+                            <svg
+                                class="tw:w-4 tw:h-4"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                            >
+                                <path
+                                    d="M4 10l2.5-4 3 3 2.5-5 2.5 5 3-3L20 10l-2 9H6l-2-9z"
+                                    fill="currentColor"
+                                    stroke-linejoin="round"
+                                />
+                            </svg>
+                        </span>
+                        主揪專用：你現在要幫誰填寫？
+                    </label>
                     <select
-                        :value="guestViewAsId"
-                        @change="onGuestVmSelect"
-                        class="tw:w-full tw:p-2 tw:rounded-lg tw:border tw:border-amber-300 tw:bg-white tw:text-sm"
+                        v-model="selectedUserId"
+                        class="tw:w-full tw:p-2 tw:bg-white tw:border tw:border-yellow-300 tw:rounded-lg tw:text-sm tw:outline-none"
                     >
                         <option
-                            v-for="v in virtualMembersList"
-                            :key="v.id"
-                            :value="v.id"
+                            v-for="user in managedUsers"
+                            :key="user.id"
+                            :value="user.id"
                         >
-                            {{ v.displayName }}
+                            {{ user.name }}
                         </option>
                     </select>
                 </div>
-                <router-link
-                    v-if="!guestViewAsId && virtualMembersList.length === 0"
-                    :to="`/group/${groupId}`"
-                    class="tw:inline-block tw:text-primary tw:font-bold tw:underline"
-                >
-                    回群組頁設定預覽身分
-                </router-link>
-            </div>
 
-            <div
-                v-if="isFinalized"
-                class="tw:bg-accent tw:text-white tw:p-4 tw:rounded-xl tw:shadow-md tw:mb-4 tw:text-center tw:animate-fade-in"
-            >
-                <div class="tw:text-sm tw:font-medium tw:opacity-90">
-                    活動日期已定案
-                </div>
+                <EventCalendar
+                    :months="event.targetMonths"
+                    :monthIndex="currentMonthIndex"
+                    :days="calendarDays"
+                    :isEditing="isEditing"
+                    :isFinalized="isFinalized"
+                    :checkSelected="isSelectedByMe"
+                    :getUsers="getAvailableUsersForDate"
+                    @prev="currentMonthIndex--"
+                    @next="currentMonthIndex++"
+                    @date-click="toggleDate"
+                />
+
                 <div
-                    class="tw:text-2xl tw:font-black tw:tracking-wider tw:mt-1"
+                    v-if="focusedDate && !isFinalized"
+                    class="tw:bg-white tw:border tw:border-gray-200 tw:rounded-xl tw:p-4 tw:animate-fade-in tw:mb-4 tw:mt-4 tw:shadow-sm"
                 >
-                    {{ event.finalDate.replace(/-/g, " / ") }}
-                    <span
-                        v-if="event.finalTime"
-                        class="tw:block tw:text-lg tw:mt-1 tw:opacity-90"
+                    <h4
+                        class="tw:flex tw:items-center tw:gap-1.5 tw:font-bold tw:text-gray-700 tw:text-sm tw:mb-3 tw:border-b tw:border-gray-100 tw:pb-2"
                     >
-                        {{ event.finalTime }}
-                    </span>
-                </div>
-            </div>
+                        <svg
+                            class="tw:w-4 tw:h-4 tw:text-primary"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke-width="2.5"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                            />
+                        </svg>
+                        {{ focusedDate.replace(/-/g, " / ") }} 可參加名單
+                    </h4>
 
-            <div
-                v-if="isEditing && managedUsers.length > 1"
-                class="tw:mb-4 tw:bg-yellow-50 tw:border tw:border-yellow-200 tw:p-3 tw:rounded-xl tw:animate-fade-in"
-            >
-                <label
-                    class="tw:block tw:text-xs tw:font-bold tw:text-yellow-800 tw:mb-1"
+                    <div class="tw:flex tw:flex-wrap tw:gap-2">
+                        <span
+                            v-if="
+                                getAvailableUsersForDate(focusedDate)
+                                    .length === 0
+                            "
+                            class="tw:text-xs tw:text-gray-400 tw:py-1"
+                        >
+                            這天沒有人有空
+                        </span>
+
+                        <span
+                            v-for="u in getAvailableUsersForDate(focusedDate)"
+                            :key="u.id"
+                            class="tw:inline-flex tw:items-center tw:text-xs tw:font-medium tw:bg-gray-100 tw:text-gray-700 tw:px-2.5 tw:py-1.5 tw:rounded-lg"
+                        >
+                            {{ u.displayName }}
+                        </span>
+                    </div>
+                </div>
+
+                <EventStats
+                    v-if="!isEditing && !isFinalized"
+                    class="tw:mt-4"
+                    :topDates="topDates"
+                    :respondedUsers="respondedUsers"
+                    :pendingUsers="pendingUsers"
+                />
+
+                <!-- 主揪：發送 LINE Flex 提醒尚未填寫的成員（僅限已認領的 LINE 用戶） -->
+                <div
+                    v-if="
+                        !isEditing &&
+                        !isFinalized &&
+                        canManageEvent &&
+                        pendingUserIdsWithLine.length > 0
+                    "
+                    class="tw:mt-4 tw:bg-white tw:border tw:border-gray-200 tw:rounded-xl tw:p-4"
                 >
-                    <span
-                        class="tw:inline-flex tw:items-center tw:justify-center tw:w-4 tw:h-4 tw:mr-1"
+                    <p class="tw:text-sm tw:text-gray-600 tw:mb-3">
+                        尚有
+                        {{ pendingUserIdsWithLine.length }}
+                        位成員未填寫，點下方按鈕可選擇 LINE 聊天室或群組發送提醒
+                    </p>
+                    <button
+                        type="button"
+                        @click="shareRemindToLine"
+                        class="tw:w-full tw:bg-[#06C755] tw:text-white tw:py-2.5 tw:rounded-xl tw:font-bold tw:text-sm tw:flex tw:items-center tw:justify-center tw:gap-2 active:tw:scale-95"
                     >
                         <svg
                             class="tw:w-4 tw:h-4"
+                            fill="currentColor"
                             viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="1.8"
                         >
                             <path
-                                d="M4 10l2.5-4 3 3 2.5-5 2.5 5 3-3L20 10l-2 9H6l-2-9z"
-                                fill="currentColor"
-                                stroke-linejoin="round"
+                                d="M24 10.3c0-5.7-5.4-10.3-12-10.3S0 4.6 0 10.3c0 5.1 4.3 9.4 10.1 10.2.4.1.9.3 1 .7l.3 1.9c0 .1.1.2.2.2.1 0 .2 0 .2-.1.9-.6 5-3.3 7.5-5.5 2.9-2.3 4.7-5 4.7-7.4z"
                             />
                         </svg>
-                    </span>
-                    主揪專用：你現在要幫誰填寫？
-                </label>
-                <select
-                    v-model="selectedUserId"
-                    class="tw:w-full tw:p-2 tw:bg-white tw:border tw:border-yellow-300 tw:rounded-lg tw:text-sm tw:outline-none"
-                >
-                    <option
-                        v-for="user in managedUsers"
-                        :key="user.id"
-                        :value="user.id"
-                    >
-                        {{ user.name }}
-                    </option>
-                </select>
-            </div>
-
-            <EventCalendar
-                :months="event.targetMonths"
-                :monthIndex="currentMonthIndex"
-                :days="calendarDays"
-                :isEditing="isEditing"
-                :isFinalized="isFinalized"
-                :checkSelected="isSelectedByMe"
-                :getUsers="getAvailableUsersForDate"
-                @prev="currentMonthIndex--"
-                @next="currentMonthIndex++"
-                @date-click="toggleDate"
-            />
-
-            <div
-                v-if="focusedDate && !isFinalized"
-                class="tw:bg-white tw:border tw:border-gray-200 tw:rounded-xl tw:p-4 tw:animate-fade-in tw:mb-4 tw:mt-4 tw:shadow-sm"
-            >
-                <h4
-                    class="tw:flex tw:items-center tw:gap-1.5 tw:font-bold tw:text-gray-700 tw:text-sm tw:mb-3 tw:border-b tw:border-gray-100 tw:pb-2"
-                >
-                    <svg
-                        class="tw:w-4 tw:h-4 tw:text-primary"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke-width="2.5"
-                        stroke="currentColor"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                    </svg>
-                    {{ focusedDate.replace(/-/g, " / ") }} 可參加名單
-                </h4>
-
-                <div class="tw:flex tw:flex-wrap tw:gap-2">
-                    <span
-                        v-if="
-                            getAvailableUsersForDate(focusedDate).length === 0
-                        "
-                        class="tw:text-xs tw:text-gray-400 tw:py-1"
-                    >
-                        這天沒有人有空
-                    </span>
-
-                    <span
-                        v-for="u in getAvailableUsersForDate(focusedDate)"
-                        :key="u.id"
-                        class="tw:inline-flex tw:items-center tw:text-xs tw:font-medium tw:bg-gray-100 tw:text-gray-700 tw:px-2.5 tw:py-1.5 tw:rounded-lg"
-                    >
-                        {{ u.displayName }}
-                    </span>
+                        發送提醒到 LINE
+                    </button>
                 </div>
             </div>
+        </div>
 
-            <EventStats
-                v-if="!isEditing && !isFinalized"
-                class="tw:mt-4"
-                :topDates="topDates"
-                :respondedUsers="respondedUsers"
-                :pendingUsers="pendingUsers"
-            />
-
-            <!-- 主揪：發送 LINE Flex 提醒尚未填寫的成員（僅限已認領的 LINE 用戶） -->
-            <div
-                v-if="
-                    !isEditing &&
-                    !isFinalized &&
-                    canManageEvent &&
-                    pendingUserIdsWithLine.length > 0
-                "
-                class="tw:mt-4 tw:bg-white tw:border tw:border-gray-200 tw:rounded-xl tw:p-4"
-            >
-                <p class="tw:text-sm tw:text-gray-600 tw:mb-3">
-                    尚有
-                    {{ pendingUserIdsWithLine.length }}
-                    位成員未填寫，點下方按鈕可選擇 LINE 聊天室或群組發送提醒
-                </p>
+        <div
+            class="footer-container tw:flex-none tw:shrink-0 tw:bg-white tw:border-t tw:border-gray-200 tw:shadow-lg tw:p-4 tw:pb-[max(1rem,env(safe-area-inset-bottom,0px))] tw:flex tw:gap-3 tw:w-full tw:z-20 tw:animate-slide-up"
+        >
+            <template v-if="!isEditing && isFinalized">
+                <span
+                    class="tw:flex-1 tw:bg-gray-100 tw:text-gray-500 tw:py-3.5 tw:rounded-xl tw:font-bold tw:text-sm tw:flex tw:items-center tw:justify-center"
+                >
+                    活動已定案
+                </span>
                 <button
                     type="button"
-                    @click="shareRemindToLine"
-                    class="tw:w-full tw:bg-[#06C755] tw:text-white tw:py-2.5 tw:rounded-xl tw:font-bold tw:text-sm tw:flex tw:items-center tw:justify-center tw:gap-2 active:tw:scale-95"
+                    @click="shareFinalizedToLine"
+                    class="tw:flex-1 tw:bg-primary tw:text-white tw:py-3.5 tw:rounded-xl tw:font-bold tw:text-sm tw:flex tw:items-center tw:justify-center tw:gap-2 active:tw:scale-95"
                 >
                     <svg
                         class="tw:w-4 tw:h-4"
@@ -736,117 +952,84 @@ const saveChanges = async () => {
                             d="M24 10.3c0-5.7-5.4-10.3-12-10.3S0 4.6 0 10.3c0 5.1 4.3 9.4 10.1 10.2.4.1.9.3 1 .7l.3 1.9c0 .1.1.2.2.2.1 0 .2 0 .2-.1.9-.6 5-3.3 7.5-5.5 2.9-2.3 4.7-5 4.7-7.4z"
                         />
                     </svg>
-                    發送提醒到 LINE
-                </button>
-            </div>
-        </div>
-
-        <div
-            v-if="!isEditing && isFinalized"
-            class="tw:fixed tw:bottom-0 tw:left-0 tw:w-full tw:bg-white tw:border-t tw:shadow-lg tw:p-4 tw:flex tw:gap-3 tw:z-50 tw:animate-slide-up"
-        >
-            <span
-                class="tw:flex-1 tw:bg-gray-100 tw:text-gray-500 tw:py-3.5 tw:rounded-xl tw:font-bold tw:text-sm tw:flex tw:items-center tw:justify-center"
-            >
-                活動已定案
-            </span>
-            <button
-                type="button"
-                @click="shareFinalizedToLine"
-                class="tw:flex-1 tw:bg-primary tw:text-white tw:py-3.5 tw:rounded-xl tw:font-bold tw:text-sm tw:flex tw:items-center tw:justify-center tw:gap-2 active:tw:scale-95"
-            >
-                <svg
-                    class="tw:w-4 tw:h-4"
-                    fill="currentColor"
-                    viewBox="0 0 24 24"
-                >
-                    <path
-                        d="M24 10.3c0-5.7-5.4-10.3-12-10.3S0 4.6 0 10.3c0 5.1 4.3 9.4 10.1 10.2.4.1.9.3 1 .7l.3 1.9c0 .1.1.2.2.2.1 0 .2 0 .2-.1.9-.6 5-3.3 7.5-5.5 2.9-2.3 4.7-5 4.7-7.4z"
-                    />
-                </svg>
-                發送定案到 LINE
-            </button>
-        </div>
-
-        <div
-            v-else-if="!isEditing && !isFinalized"
-            class="tw:fixed tw:bottom-0 tw:left-0 tw:w-full tw:bg-white tw:border-t tw:border-gray-200 tw:shadow-lg tw:p-4 tw:flex tw:gap-3 tw:z-50 tw:animate-slide-up"
-        >
-            <template v-if="!isGuestMode">
-                <button
-                    type="button"
-                    :disabled="!canDecideFinalDate"
-                    :title="canDecideFinalDate ? '' : '僅活動發起人可決定日期'"
-                    @click="handleDecideClick"
-                    class="tw:flex-1 tw:py-3.5 tw:rounded-xl tw:font-bold tw:shadow-md tw:transition tw:flex tw:items-center tw:justify-center disabled:tw:cursor-not-allowed disabled:tw:bg-gray-200 disabled:tw:text-gray-400 disabled:tw:shadow-none tw:bg-accent tw:text-white active:tw:scale-95 disabled:active:tw:scale-100"
-                >
-                    <span class="tw:inline-flex tw:items-center tw:gap-1">
-                        <svg
-                            class="tw:w-4 tw:h-4"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="1.8"
-                        >
-                            <path
-                                d="M4 10l2.5-4 3 3 2.5-5 2.5 5 3-3L20 10l-2 9H6l-2-9z"
-                                fill="currentColor"
-                                stroke-linejoin="round"
-                            />
-                        </svg>
-                        <span>決定日期</span>
-                    </span>
-                </button>
-                <button
-                    @click="startEditing"
-                    class="tw:flex-2 tw:bg-primary tw:text-white tw:py-3.5 tw:rounded-xl tw:font-bold tw:text-lg tw:shadow-md active:tw:scale-95 tw:transition"
-                >
-                    <span class="tw:inline-flex tw:items-center tw:gap-2">
-                        <span>我要選日子</span>
-                        <svg
-                            class="tw:w-4 tw:h-4"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
-                        >
-                            <path
-                                d="M16.862 3.487l3.651 3.651M4 20l3.5-.5L19 8.5 15.5 5 4.5 15.5 4 20z"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                            />
-                        </svg>
-                    </span>
+                    發送定案到 LINE
                 </button>
             </template>
-            <button
-                v-else
-                type="button"
-                @click="loginLine"
-                class="tw:w-full tw:bg-[#06C755] tw:text-white tw:py-3.5 tw:rounded-xl tw:font-bold tw:text-lg tw:shadow-md active:tw:scale-95 tw:transition"
-            >
-                登入跟朋友一起選日子！
-            </button>
-        </div>
-
-        <div
-            v-else
-            class="tw:fixed tw:bottom-0 tw:left-0 tw:w-full tw:bg-white tw:border-t tw:shadow-lg tw:p-4 tw:flex tw:gap-3 tw:z-50 tw:animate-slide-up"
-        >
-            <button
-                @click="stopEditing"
-                :disabled="isSaving"
-                class="tw:flex-1 tw:bg-gray-100 tw:text-gray-700 tw:py-3.5 tw:rounded-xl tw:font-bold active:tw:scale-95 tw:transition disabled:tw:opacity-50"
-            >
-                取消重填
-            </button>
-            <button
-                @click="saveChanges"
-                :disabled="isSaving"
-                class="tw:flex-1 tw:bg-primary tw:text-white tw:py-3.5 tw:rounded-xl tw:font-bold tw:shadow-md active:tw:scale-95 tw:transition disabled:tw:opacity-50"
-            >
-                {{ isSaving ? "儲存中..." : "確認送出" }}
-            </button>
+            <template v-else-if="!isEditing && !isFinalized">
+                <template v-if="!isGuestMode">
+                    <button
+                        type="button"
+                        :disabled="!canDecideFinalDate"
+                        :title="
+                            canDecideFinalDate ? '' : '僅活動發起人可決定日期'
+                        "
+                        @click="handleDecideClick"
+                        class="tw:flex-1 tw:py-3.5 tw:rounded-xl tw:font-bold tw:shadow-md tw:transition tw:flex tw:items-center tw:justify-center disabled:tw:cursor-not-allowed disabled:tw:bg-gray-200 disabled:tw:text-gray-400 disabled:tw:shadow-none tw:bg-accent tw:text-white active:tw:scale-95 disabled:active:tw:scale-100"
+                    >
+                        <span class="tw:inline-flex tw:items-center tw:gap-1">
+                            <svg
+                                class="tw:w-4 tw:h-4"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                            >
+                                <path
+                                    d="M4 10l2.5-4 3 3 2.5-5 2.5 5 3-3L20 10l-2 9H6l-2-9z"
+                                    fill="currentColor"
+                                    stroke-linejoin="round"
+                                />
+                            </svg>
+                            <span>決定日期</span>
+                        </span>
+                    </button>
+                    <button
+                        @click="startEditing"
+                        class="tw:flex-2 tw:min-w-0 tw:bg-primary tw:text-white tw:py-3.5 tw:rounded-xl tw:font-bold tw:text-lg tw:shadow-md active:tw:scale-95 tw:transition"
+                    >
+                        <span class="tw:inline-flex tw:items-center tw:gap-2">
+                            <span>我要選日子</span>
+                            <svg
+                                class="tw:w-4 tw:h-4 tw:shrink-0"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                            >
+                                <path
+                                    d="M16.862 3.487l3.651 3.651M4 20l3.5-.5L19 8.5 15.5 5 4.5 15.5 4 20z"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                />
+                            </svg>
+                        </span>
+                    </button>
+                </template>
+                <button
+                    v-else
+                    type="button"
+                    @click="loginLine"
+                    class="tw:w-full tw:bg-[#06C755] tw:text-white tw:py-3.5 tw:rounded-xl tw:font-bold tw:text-lg tw:shadow-md active:tw:scale-95 tw:transition"
+                >
+                    登入跟朋友一起選日子！
+                </button>
+            </template>
+            <template v-else>
+                <button
+                    @click="stopEditing"
+                    :disabled="isSaving"
+                    class="tw:flex-1 tw:bg-gray-100 tw:text-gray-700 tw:py-3.5 tw:rounded-xl tw:font-bold active:tw:scale-95 tw:transition disabled:tw:opacity-50"
+                >
+                    取消重填
+                </button>
+                <button
+                    @click="saveChanges"
+                    :disabled="isSaving"
+                    class="tw:flex-1 tw:bg-primary tw:text-white tw:py-3.5 tw:rounded-xl tw:font-bold tw:shadow-md active:tw:scale-95 tw:transition disabled:tw:opacity-50"
+                >
+                    {{ isSaving ? "儲存中..." : "確認送出" }}
+                </button>
+            </template>
         </div>
 
         <DecideModal

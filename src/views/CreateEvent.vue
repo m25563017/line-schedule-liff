@@ -4,11 +4,12 @@ import { useRoute, useRouter } from "vue-router";
 import { db } from "../utils/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { addGroupActivityLog } from "../utils/activityLog";
+import { useNotify } from "@pieda/core";
 
 const route = useRoute();
 const router = useRouter();
 const userProfile = inject("userProfile");
-
+const $notify = useNotify();
 const groupId = route.params.id;
 const title = ref("");
 
@@ -156,7 +157,7 @@ const handleCreate = async () => {
                     <div>
                         <label
                             class="tw:block tw:text-sm tw:font-bold tw:text-gray-700 tw:mb-2"
-                            >開放長度</label
+                            >連續開放幾個月</label
                         >
                         <div class="tw:relative">
                             <select
@@ -187,7 +188,18 @@ const handleCreate = async () => {
                         </div>
                     </div>
                 </div>
-
+                <div
+                    class="tw:rounded-lg tw:bg-gray-50 tw:border tw:border-gray-100 tw:p-3 tw:space-y-2"
+                >
+                    <p class="tw:text-xs tw:font-bold tw:text-gray-700">
+                        成員能在行事曆上勾選的「月份範圍」
+                    </p>
+                    <p class="tw:text-xs tw:text-gray-600 tw:leading-relaxed">
+                        從下方「起始月份」起，最多連續開放
+                        <strong class="tw:text-gray-700">1～3 個月</strong
+                        >；成員只會在這幾個月的日期上標示有空／沒空。
+                    </p>
+                </div>
                 <div
                     class="tw:p-3 tw:bg-green-50 tw:rounded-lg tw:border tw:border-green-100"
                 >
@@ -212,7 +224,7 @@ const handleCreate = async () => {
                     :disabled="isSubmitting"
                     class="tw:w-full tw:bg-primary tw:text-white tw:py-3.5 tw:rounded-lg tw:font-bold tw:text-lg tw:shadow-md active:tw:scale-95 tw:transition disabled:tw:opacity-50 mt-4"
                 >
-                    {{ isSubmitting ? "建立中..." : "確定發起" }}
+                    {{ isSubmitting ? "建立中..." : "建立！" }}
                 </button>
             </div>
         </div>

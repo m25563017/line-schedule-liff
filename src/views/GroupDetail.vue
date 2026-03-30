@@ -10,6 +10,9 @@ import {
     getDocs,
     orderBy,
     limit,
+    startAfter,
+    getCountFromServer,
+    where,
 } from "firebase/firestore";
 import { useNotify } from "@pieda/core";
 
@@ -30,6 +33,14 @@ const loginLine = inject("loginLine");
 const group = ref(null);
 const events = ref([]);
 const loading = ref(true);
+
+/** 活動列表：每次只抓一頁，避免一次讀取過多 */
+const PAGE_SIZE = 10;
+const lastEventDoc = ref(null);
+const hasMoreEvents = ref(false);
+const eventsLoadingMore = ref(false);
+/** 分頁標籤數字用 aggregate，與已載入筆數無關 */
+const eventTabCounts = ref({ all: 0, ongoing: 0, finalized: 0 });
 
 const $notify = useNotify();
 
@@ -94,11 +105,6 @@ const filteredEvents = computed(() => {
         return events.value.filter((e) => !e.finalDate);
     return events.value;
 });
-const eventTabCounts = computed(() => ({
-    all: events.value.length,
-    ongoing: events.value.filter((e) => !e.finalDate).length,
-    finalized: events.value.filter((e) => !!e.finalDate).length,
-}));
 
 // 成員人數（按鈕顯示用）
 const memberCount = computed(
@@ -163,6 +169,62 @@ function onGuestVmChange(e) {
     setGuestVirtualMemberId(groupId, id);
 }
 
+const eventsRef = () => collection(db, "groups", groupId, "events");
+
+async function fetchEventTabCounts() {
+    const ref = eventsRef();
+    const allSnap = await getCountFromServer(query(ref));
+    const all = allSnap.data().count;
+    // 已定案：有 finalDate 且為非空字串（與畫面 !!e.finalDate 一致）
+    const finalizedSnap = await getCountFromServer(
+        query(ref, where("finalDate", ">", "")),
+    );
+    const finalized = finalizedSnap.data().count;
+    eventTabCounts.value = {
+        all,
+        ongoing: Math.max(0, all - finalized),
+        finalized,
+    };
+}
+
+/** @param {{ append?: boolean }} opts */
+async function fetchEventsPage(opts = {}) {
+    const append = !!opts.append;
+    const ref = eventsRef();
+    let q = query(ref, orderBy("createdAt", "desc"), limit(PAGE_SIZE));
+    if (append && lastEventDoc.value) {
+        q = query(
+            ref,
+            orderBy("createdAt", "desc"),
+            startAfter(lastEventDoc.value),
+            limit(PAGE_SIZE),
+        );
+    }
+    const snap = await getDocs(q);
+    const batch = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    if (append) events.value = [...events.value, ...batch];
+    else events.value = batch;
+    lastEventDoc.value = snap.docs[snap.docs.length - 1] ?? null;
+    hasMoreEvents.value = snap.docs.length === PAGE_SIZE;
+}
+
+async function loadMoreEvents() {
+    if (!hasMoreEvents.value || eventsLoadingMore.value) return;
+    eventsLoadingMore.value = true;
+    try {
+        await fetchEventsPage({ append: true });
+    } catch (e) {
+        console.error("載入更多活動失敗", e);
+        $notify.alert({
+            title: "系統通知",
+            message: "載入更多活動失敗，請稍後再試。",
+            variant: "error",
+        });
+    } finally {
+        eventsLoadingMore.value = false;
+    }
+}
+
 onMounted(async () => {
     try {
         const docRef = doc(db, "groups", groupId);
@@ -171,14 +233,10 @@ onMounted(async () => {
             group.value = { id: docSnap.id, ...docSnap.data() };
         }
 
-        const eventsRef = collection(db, "groups", groupId, "events");
-        const q = query(eventsRef, orderBy("createdAt", "desc"));
-        const eventSnaps = await getDocs(q);
-
-        events.value = eventSnaps.docs.map((d) => ({
-            id: d.id,
-            ...d.data(),
-        }));
+        await Promise.all([
+            fetchEventTabCounts(),
+            fetchEventsPage({ append: false }),
+        ]);
 
         const logsRef = collection(db, "groups", groupId, "activityLogs");
         const logsQ = query(logsRef, orderBy("createdAt", "desc"), limit(20));
@@ -417,10 +475,20 @@ onMounted(async () => {
 
                 <div
                     v-if="filteredEvents.length === 0"
-                    class="tw:text-center tw:text-gray-400 tw:py-4 tw:text-sm"
+                    class="tw:text-center tw:text-gray-400 tw:py-4 tw:text-sm tw:space-y-2"
                 >
-                    <span v-if="events.length === 0">還沒有發起任何活動</span>
-                    <span v-else>此分類目前沒有活動</span>
+                    <span v-if="eventTabCounts.all === 0"
+                        >還沒有發起任何活動</span
+                    >
+                    <template v-else>
+                        <p>此分類在目前已載入的活動中沒有項目。</p>
+                        <p
+                            v-if="hasMoreEvents"
+                            class="tw:text-xs tw:text-gray-500"
+                        >
+                            可先點下方「載入更多」載入較早建立的活動。
+                        </p>
+                    </template>
                 </div>
                 <div v-else class="tw:space-y-3">
                     <EventCard
@@ -430,6 +498,24 @@ onMounted(async () => {
                         :members="group.members"
                         :groupId="groupId"
                     />
+                </div>
+                <div
+                    v-if="eventTabCounts.all > 0"
+                    class="tw:mt-4 tw:flex tw:flex-col tw:items-center tw:gap-2"
+                >
+                    <button
+                        v-if="hasMoreEvents"
+                        type="button"
+                        :disabled="eventsLoadingMore"
+                        class="tw:w-full tw:max-w-xs tw:py-2.5 tw:rounded-xl tw:text-sm tw:font-bold tw:border-2 tw:border-gray-200 tw:text-gray-700 tw:bg-white hover:tw:bg-gray-50 tw:transition disabled:tw:opacity-50"
+                        @click="loadMoreEvents"
+                    >
+                        {{
+                            eventsLoadingMore
+                                ? "載入中…"
+                                : `載入更多（尚餘約 ${Math.max(0, eventTabCounts.all - events.length)} 筆）`
+                        }}
+                    </button>
                 </div>
             </div>
 

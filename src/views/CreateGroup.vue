@@ -3,6 +3,7 @@ import { ref, inject, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { db, storage, ensureSignedIn } from "../utils/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import defaultAvatar from "@/assets/img/default-avatar.png";
 import {
     ref as storageRef,
     uploadBytes,
@@ -287,10 +288,7 @@ const handleCreate = async () => {
                             }"
                         >
                             <img
-                                :src="
-                                    member.pictureUrl ||
-                                    'https://via.placeholder.com/40?text=V'
-                                "
+                                :src="member.pictureUrl || defaultAvatar"
                                 class="tw:w-10 tw:h-10 tw:rounded-full tw:bg-gray-200 tw:object-cover tw:border"
                             />
 
@@ -305,11 +303,11 @@ const handleCreate = async () => {
                                         class="tw:text-xs tw:text-green-600"
                                         >(你)</span
                                     >
-                                    <span
+                                    <!-- <span
                                         v-if="member.isVirtual"
                                         class="tw:text-[10px] tw:bg-gray-100 tw:text-gray-500 tw:px-1.5 tw:rounded"
                                         >虛擬</span
-                                    >
+                                    > -->
                                 </div>
 
                                 <div
@@ -366,14 +364,7 @@ const handleCreate = async () => {
                     <p
                         class="tw:text-xs tw:text-amber-700 tw:mt-3 tw:px-1 tw:leading-relaxed tw:bg-amber-50 tw:rounded-lg tw:p-2 tw:border tw:border-amber-100"
                     >
-                        群組至少需要 2
-                        位成員（含你）；請新增至少一位虛擬成員或等朋友加入後再建立。
-                    </p>
-                    <p
-                        class="tw:text-xs tw:text-gray-400 tw:mt-3 tw:px-1 tw:leading-relaxed"
-                    >
-                        *
-                        虛擬成員之後可透過分享連結，讓真實的朋友加入並取代其位置。
+                        群組至少需要 2 位成員（含你）；請新增至少一位成員。
                     </p>
                 </div>
             </div>

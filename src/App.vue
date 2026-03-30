@@ -4,6 +4,7 @@ import liff from "@line/liff";
 import { useNotify } from "@pieda/core";
 import { LIFF_ID } from "./config/liff";
 import { lineProfileRef } from "./lineProfile";
+import defaultAvatar from "@/assets/img/default-avatar.png";
 
 const profile = ref(null);
 const isLiffReady = ref(false);
@@ -51,9 +52,8 @@ onMounted(async () => {
                 if (!errorMessage.value) {
                     profile.value = {
                         userId: "test_user_001",
-                        displayName: "開發者小明",
-                        pictureUrl:
-                            "https://via.placeholder.com/150/06C755/FFFFFF?text=Dev",
+                        displayName: "使用者",
+                        pictureUrl: defaultAvatar,
                         statusMessage: "測試中...",
                     };
                     isLiffReady.value = true;
@@ -148,8 +148,11 @@ onMounted(async () => {
             <p class="tw:animate-pulse">系統載入中...</p>
         </div>
 
-        <div v-else class="tw:flex-1 tw:flex tw:flex-col tw:overflow-hidden">
-            <main class="tw:flex-1 tw:overflow-y-auto tw:relative tw:w-full">
+        <div
+            v-else
+            class="tw:flex-1 tw:min-h-0 tw:flex tw:flex-col tw:overflow-hidden"
+        >
+            <main class="tw:flex-1 tw:min-h-0 tw:overflow-y-auto tw:relative tw:w-full">
                 <router-view></router-view>
             </main>
         </div>

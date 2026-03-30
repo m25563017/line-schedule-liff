@@ -16,12 +16,22 @@ const props = defineProps({
 // 定義要傳回給父元件的事件
 const emit = defineEmits(["close", "confirm"]);
 
+const $notify = useNotify();
+
 // 元件內部的狀態：日期、時間（24 小時制，分鐘 00/10/20/30）、是否展開其他日期
 const finalDateInput = ref("");
 const selectedHour = ref("09"); // 0–23
 const selectedMinute = ref("00"); // 00, 10, 20, 30, 40, 50
+/** withTime：指定時間；noTime：先只定日期 */
+const timeMode = ref("withTime");
 const showOtherDate = ref(false);
 const hourDropdownOpen = ref(false);
+const minuteDropdownOpen = ref(false);
+
+function closeTimeDropdowns() {
+    hourDropdownOpen.value = false;
+    minuteDropdownOpen.value = false;
+}
 
 // 24 小時制：0–23
 const hourOptions = Array.from({ length: 24 }, (_, i) => ({
@@ -43,10 +53,11 @@ watch(
             }
             selectedHour.value = "09";
             selectedMinute.value = "00";
+            timeMode.value = "withTime";
             showOtherDate.value = !(
                 props.topDates && props.topDates.length > 0
             );
-            hourDropdownOpen.value = false;
+            closeTimeDropdowns();
         }
     },
 );
@@ -61,7 +72,10 @@ const handleConfirm = () => {
         });
         return;
     }
-    const time = `${selectedHour.value.padStart(2, "0")}:${selectedMinute.value}`;
+    const time =
+        timeMode.value === "noTime"
+            ? ""
+            : `${selectedHour.value.padStart(2, "0")}:${selectedMinute.value}`;
     emit("confirm", {
         date: finalDateInput.value,
         time,
@@ -76,7 +90,7 @@ const handleConfirm = () => {
     >
         <div
             class="tw:bg-white tw:rounded-2xl tw:w-full tw:max-w-sm tw:p-6 tw:shadow-xl tw:animate-slide-up"
-            @click.self="hourDropdownOpen = false"
+            @click.self="closeTimeDropdowns"
         >
             <h2 class="tw:text-xl tw:font-bold tw:text-gray-800 tw:mb-2">
                 拍板定案！
@@ -148,72 +162,232 @@ const handleConfirm = () => {
                 <div class="tw:mb-4">
                     <label
                         class="tw:block tw:text-xs tw:font-bold tw:text-gray-400 tw:mb-2"
-                        >決定時間（24 小時制）：</label
+                        >時間</label
                     >
-                    <div class="tw:flex tw:gap-2">
-                        <!-- 自訂可捲動列表-->
-                        <div class="tw:flex-1 tw:relative">
-                            <button
-                                type="button"
-                                @click="hourDropdownOpen = !hourDropdownOpen"
-                                class="tw:w-full tw:p-2 tw:rounded-xl tw:border-2 tw:border-gray-100 tw:bg-white tw:text-gray-700 tw:font-medium tw:outline-none focus:tw:border-orange-200 tw:text-left tw:flex tw:items-center tw:justify-between"
+                    <div class="tw:space-y-2">
+                        <div
+                            class="tw:rounded-xl tw:border-2 tw:transition"
+                            :class="
+                                timeMode === 'withTime'
+                                    ? 'tw:border-orange-500 tw:bg-orange-50'
+                                    : 'tw:border-gray-100 tw:bg-white'
+                            "
+                        >
+                            <label
+                                class="tw:flex tw:items-center tw:gap-2 tw:cursor-pointer tw:p-3"
                             >
-                                <span
-                                    >{{
-                                        selectedHour.padStart(2, "0")
-                                    }}
-                                    時</span
+                                <input
+                                    v-model="timeMode"
+                                    type="radio"
+                                    value="withTime"
+                                    class="tw:sr-only"
+                                    @change="closeTimeDropdowns"
+                                />
+                                <div
+                                    class="tw:w-5 tw:h-5 tw:rounded-full tw:border-2 tw:flex tw:items-center tw:justify-center tw:shrink-0"
+                                    :class="
+                                        timeMode === 'withTime'
+                                            ? 'tw:border-orange-500 tw:bg-orange-500'
+                                            : 'tw:border-gray-300 tw:bg-white'
+                                    "
+                                    aria-hidden="true"
                                 >
+                                    <svg
+                                        v-if="timeMode === 'withTime'"
+                                        class="tw:w-3 tw:h-3 tw:text-white"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke-width="3"
+                                        stroke="currentColor"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            d="M4.5 12.75l6 6 9-13.5"
+                                        />
+                                    </svg>
+                                </div>
+                                <span
+                                    class="tw:text-sm tw:font-medium"
+                                    :class="
+                                        timeMode === 'withTime'
+                                            ? 'tw:text-orange-700'
+                                            : 'tw:text-gray-800'
+                                    "
+                                    >指定時間（24 小時制）</span
+                                >
+                            </label>
+                            <div
+                                v-show="timeMode === 'withTime'"
+                                class="tw:flex tw:gap-2 tw:pb-3 tw:pl-10 tw:pr-3"
+                            >
+                                <div class="tw:flex-1 tw:relative tw:z-20">
+                                    <button
+                                        type="button"
+                                        @click.stop="
+                                            hourDropdownOpen = !hourDropdownOpen;
+                                            if (hourDropdownOpen)
+                                                minuteDropdownOpen = false;
+                                        "
+                                        class="tw:w-full tw:p-2 tw:rounded-xl tw:border-2 tw:border-gray-100 tw:bg-white tw:text-gray-700 tw:font-medium tw:outline-none focus:tw:border-orange-200 tw:text-left tw:flex tw:items-center tw:justify-between"
+                                    >
+                                        <span
+                                            >{{
+                                                selectedHour.padStart(2, "0")
+                                            }}
+                                            時</span
+                                        >
+                                        <svg
+                                            class="tw:w-4 tw:h-4 tw:shrink-0 tw:transition-transform tw:duration-200"
+                                            :class="
+                                                hourDropdownOpen &&
+                                                'tw:rotate-180'
+                                            "
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                d="M19 9l-7 7-7-7"
+                                            />
+                                        </svg>
+                                    </button>
+                                    <div
+                                        v-show="hourDropdownOpen"
+                                        class="tw:absolute tw:left-0 tw:right-0 tw:top-full tw:mt-1 tw:bg-white tw:border tw:border-gray-200 tw:rounded-xl tw:shadow-lg tw:z-30 tw:max-h-48 tw:overflow-y-auto"
+                                    >
+                                        <button
+                                            v-for="opt in hourOptions"
+                                            :key="opt.value"
+                                            type="button"
+                                            @click="
+                                                selectedHour = opt.value;
+                                                hourDropdownOpen = false;
+                                            "
+                                            class="tw:w-full tw:py-2 tw:px-3 tw:text-left tw:text-gray-700 hover:tw:bg-orange-50 tw:transition tw:border-b tw:border-gray-50 last:tw:border-b-0"
+                                            :class="
+                                                selectedHour === opt.value &&
+                                                'tw:bg-orange-50 tw:font-bold tw:text-orange-700'
+                                            "
+                                        >
+                                            {{ opt.label }}
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="tw:flex-1 tw:relative tw:z-20">
+                                    <button
+                                        type="button"
+                                        @click.stop="
+                                            minuteDropdownOpen =
+                                                !minuteDropdownOpen;
+                                            if (minuteDropdownOpen)
+                                                hourDropdownOpen = false;
+                                        "
+                                        class="tw:w-full tw:p-2 tw:rounded-xl tw:border-2 tw:border-gray-100 tw:bg-white tw:text-gray-700 tw:font-medium tw:outline-none focus:tw:border-orange-200 tw:text-left tw:flex tw:items-center tw:justify-between"
+                                    >
+                                        <span>{{ selectedMinute }} 分</span>
+                                        <svg
+                                            class="tw:w-4 tw:h-4 tw:shrink-0 tw:transition-transform tw:duration-200"
+                                            :class="
+                                                minuteDropdownOpen &&
+                                                'tw:rotate-180'
+                                            "
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                d="M19 9l-7 7-7-7"
+                                            />
+                                        </svg>
+                                    </button>
+                                    <div
+                                        v-show="minuteDropdownOpen"
+                                        class="tw:absolute tw:left-0 tw:right-0 tw:top-full tw:mt-1 tw:bg-white tw:border tw:border-gray-200 tw:rounded-xl tw:shadow-lg tw:z-30 tw:max-h-48 tw:overflow-y-auto"
+                                    >
+                                        <button
+                                            v-for="m in minuteOptions"
+                                            :key="m"
+                                            type="button"
+                                            @click="
+                                                selectedMinute = m;
+                                                minuteDropdownOpen = false;
+                                            "
+                                            class="tw:w-full tw:py-2 tw:px-3 tw:text-left tw:text-gray-700 hover:tw:bg-orange-50 tw:transition tw:border-b tw:border-gray-50 last:tw:border-b-0"
+                                            :class="
+                                                selectedMinute === m &&
+                                                'tw:bg-orange-50 tw:font-bold tw:text-orange-700'
+                                            "
+                                        >
+                                            {{ m }} 分
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <label
+                            class="tw:flex tw:items-center tw:gap-2 tw:cursor-pointer tw:rounded-xl tw:border-2 tw:p-3 tw:transition"
+                            :class="
+                                timeMode === 'noTime'
+                                    ? 'tw:border-orange-500 tw:bg-orange-50'
+                                    : 'tw:border-gray-100 tw:bg-white'
+                            "
+                        >
+                            <input
+                                v-model="timeMode"
+                                type="radio"
+                                value="noTime"
+                                class="tw:sr-only"
+                                @change="closeTimeDropdowns"
+                            />
+                            <div
+                                class="tw:w-5 tw:h-5 tw:rounded-full tw:border-2 tw:flex tw:items-center tw:justify-center tw:shrink-0"
+                                :class="
+                                    timeMode === 'noTime'
+                                        ? 'tw:border-orange-500 tw:bg-orange-500'
+                                        : 'tw:border-gray-300 tw:bg-white'
+                                "
+                                aria-hidden="true"
+                            >
                                 <svg
-                                    class="tw:w-4 tw:h-4 tw:shrink-0 tw:transition-transform"
-                                    :class="hourDropdownOpen && 'tw:rotate-180'"
+                                    v-if="timeMode === 'noTime'"
+                                    class="tw:w-3 tw:h-3 tw:text-white"
                                     fill="none"
                                     viewBox="0 0 24 24"
+                                    stroke-width="3"
                                     stroke="currentColor"
-                                    stroke-width="2"
                                 >
                                     <path
                                         stroke-linecap="round"
                                         stroke-linejoin="round"
-                                        d="M19 9l-7 7-7-7"
+                                        d="M4.5 12.75l6 6 9-13.5"
                                     />
                                 </svg>
-                            </button>
-                            <div
-                                v-show="hourDropdownOpen"
-                                class="tw:absolute tw:left-0 tw:right-0 tw:top-full tw:mt-1 tw:bg-white tw:border tw:border-gray-200 tw:rounded-xl tw:shadow-lg tw:z-10 tw:max-h-48 tw:overflow-y-auto"
-                            >
-                                <button
-                                    v-for="opt in hourOptions"
-                                    :key="opt.value"
-                                    type="button"
-                                    @click="
-                                        selectedHour = opt.value;
-                                        hourDropdownOpen = false;
-                                    "
-                                    class="tw:w-full tw:py-2 tw:px-3 tw:text-left tw:text-gray-700 hover:tw:bg-orange-50 tw:transition tw:border-b tw:border-gray-50 last:tw:border-b-0"
-                                    :class="
-                                        selectedHour === opt.value &&
-                                        'tw:bg-orange-50 tw:font-bold tw:text-orange-700'
-                                    "
-                                >
-                                    {{ opt.label }}
-                                </button>
                             </div>
-                        </div>
-                        <select
-                            v-model="selectedMinute"
-                            class="tw:flex-1 tw:p-2 tw:rounded-xl tw:border-2 tw:border-gray-100 tw:bg-white tw:text-gray-700 tw:font-medium tw:outline-none focus:tw:border-orange-200"
-                        >
-                            <option
-                                v-for="m in minuteOptions"
-                                :key="m"
-                                :value="m"
+                            <span
+                                class="tw:text-sm tw:font-medium"
+                                :class="
+                                    timeMode === 'noTime'
+                                        ? 'tw:text-orange-700'
+                                        : 'tw:text-gray-800'
+                                "
+                                >目前不用決定時間</span
                             >
-                                {{ m }} 分
-                            </option>
-                        </select>
+                        </label>
                     </div>
+                    <p
+                        v-if="timeMode === 'noTime'"
+                        class="tw:mt-2 tw:text-xs tw:text-gray-400"
+                    >
+                        僅儲存日期，之後仍可再編輯或補上時間。
+                    </p>
                 </div>
 
                 <!-- 或選擇其他日期區塊 -->
