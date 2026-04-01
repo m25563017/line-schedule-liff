@@ -4,12 +4,12 @@ import { Swiper, SwiperSlide } from "swiper/vue";
 import { Pagination, Autoplay } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
-import createGroup from "@/assets/img/help/1.png";
-import createEvent from "@/assets/img/help/2.png";
-import inviteMember from "@/assets/img/help/3.png";
-import selectDate from "@/assets/img/help/4.jpg";
-import decideDate from "@/assets/img/help/5.jpg";
-import enjoyParty from "@/assets/img/help/6.jpg";
+import createGroup from "@/assets/img/help/default-swiper.png";
+import createEvent from "@/assets/img/help/default-swiper.png";
+import inviteMember from "@/assets/img/help/default-swiper.png";
+import selectDate from "@/assets/img/help/default-swiper.png";
+import decideDate from "@/assets/img/help/default-swiper.png";
+import enjoyParty from "@/assets/img/help/default-swiper.png";
 
 const props = defineProps({
     modelValue: { type: Boolean, default: false },
@@ -21,33 +21,38 @@ const swiperModules = [Pagination, Autoplay];
 
 const introSlides = [
     {
-        title: "建立群組",
-        text: "在「我的群組」點右下角建立，設定名稱、封面與成員名額，先把常用成員加好更方便。",
+        title: "歡迎來到 揪吉！",
+        text: "「如果不刻意安排，或許我們就不會再見。」長大後才發現，聚會不再是理所當然。謝謝願意為了見面而努力的我們，讓揪吉幫你，把這份珍惜化作具體的約定。",
         image: createGroup,
     },
     {
-        title: "發起活動",
-        text: "進入群組後點「發起活動」，選擇可投票的月份或範圍，建立後會產生邀請連結。",
+        title: "建立群組",
+        text: "填寫群組基本資料與成員名單，一個群組至少要有兩個成員。",
         image: createEvent,
     },
     {
-        title: "邀請加入",
-        text: "把連結傳給成員，在 LINE 內開啟後選擇或認領身分，即可加入同一個群組。",
+        title: "發起活動",
+        text: "建立活動並挑選想約的月份（選擇區間最多 3 個月）。揪吉會幫你守護這段預約的時光。",
         image: inviteMember,
     },
     {
-        title: "月曆填空",
-        text: "在月曆上點選有空的日期；若要修改，再點一次即可取消。定案前都可調整。",
+        title: "分享邀請",
+        text: "一鍵分享邀請連結或 LINE 訊息，讓朋友們加入這場活動日期決定。",
         image: selectDate,
     },
     {
-        title: "統計與定案",
-        text: "主揪查看最多人有空的日期（Top 3），確認後按「一鍵定案」鎖定日期。",
+        title: "勾選空檔",
+        text: "在月曆點選有空的日子。揪吉會自動統計出最多人有空的前三名！",
         image: decideDate,
     },
     {
-        title: "一起開心享受聚會",
-        text: "一起開心享受聚會，不用再為了約時間而煩惱。",
+        title: "拍板定案，準時見面",
+        text: "成員填完有空時間後，由主揪選定最終日期，發布定案訊息在群組裡。",
+        image: enjoyParty,
+    },
+    {
+        title: "享受相聚",
+        text: "所有的「有空」，都是因為我們在乎彼此。<br>剩下的，就讓我們把時間留給見面時的擁抱，<br>一起開心享受聚會吧！",
         image: enjoyParty,
     },
 ];
@@ -106,7 +111,6 @@ onUnmounted(() => {
                         :slides-per-view="1"
                         :space-between="0"
                         :pagination="{ clickable: true, dynamicBullets: true }"
-                        :loop="introSlides.length > 1"
                     >
                         <SwiperSlide v-for="(slide, i) in introSlides" :key="i">
                             <div
@@ -127,12 +131,15 @@ onUnmounted(() => {
                                     <h3
                                         class="tw:text-base tw:font-bold tw:text-white tw:mb-2"
                                     >
-                                        {{ slide.title }}
+                                        <span v-html="slide.title" />
                                     </h3>
                                     <p
                                         class="tw:text-sm tw:text-white tw:leading-relaxed tw:flex-1"
                                     >
-                                        {{ slide.text }}
+                                        <span
+                                            class="tw:text-center"
+                                            v-html="slide.text"
+                                        />
                                     </p>
                                     <p
                                         class="tw:text-[11px] tw:text-white tw:mt-3 tw:text-right"
