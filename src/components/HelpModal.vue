@@ -4,12 +4,14 @@ import { Swiper, SwiperSlide } from "swiper/vue";
 import { Pagination, Autoplay } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
-import createGroup from "@/assets/img/help/default-swiper.png";
-import createEvent from "@/assets/img/help/default-swiper.png";
-import inviteMember from "@/assets/img/help/default-swiper.png";
-import selectDate from "@/assets/img/help/default-swiper.png";
-import decideDate from "@/assets/img/help/default-swiper.png";
-import enjoyParty from "@/assets/img/help/default-swiper.png";
+
+import welcome from "@/assets/img/help/1.png";
+import createGroup from "@/assets/img/help/2.png";
+import createEvent from "@/assets/img/help/3.png";
+import inviteMember from "@/assets/img/help/4.png";
+import selectDate from "@/assets/img/help/5.gif";
+import decideDate from "@/assets/img/help/6.gif";
+import enjoyParty from "@/assets/img/help/7.png";
 
 const props = defineProps({
     modelValue: { type: Boolean, default: false },
@@ -23,32 +25,32 @@ const introSlides = [
     {
         title: "歡迎來到 揪吉！",
         text: "「如果不刻意安排，或許我們就不會再見。」長大後才發現，聚會不再是理所當然。謝謝願意為了見面而努力的我們，讓揪吉幫你，把這份珍惜化作具體的約定。",
-        image: createGroup,
+        image: welcome,
     },
     {
         title: "建立群組",
         text: "填寫群組基本資料與成員名單，一個群組至少要有兩個成員。",
-        image: createEvent,
+        image: createGroup,
     },
     {
         title: "發起活動",
         text: "建立活動並挑選想約的月份（選擇區間最多 3 個月）。揪吉會幫你守護這段預約的時光。",
-        image: inviteMember,
+        image: createEvent,
     },
     {
         title: "分享邀請",
-        text: "一鍵分享邀請連結或 LINE 訊息，讓朋友們加入這場活動日期決定。",
-        image: selectDate,
+        text: "一鍵分享邀請連結或 LINE 訊息，讓朋友們加入這場活動，一起決定日期。",
+        image: inviteMember,
     },
     {
         title: "勾選空檔",
         text: "在月曆點選有空的日子。揪吉會自動統計出最多人有空的前三名！",
-        image: decideDate,
+        image: selectDate,
     },
     {
         title: "拍板定案，準時見面",
         text: "成員填完有空時間後，由主揪選定最終日期，發布定案訊息在群組裡。",
-        image: enjoyParty,
+        image: decideDate,
     },
     {
         title: "享受相聚",

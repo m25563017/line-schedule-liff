@@ -1,21 +1,35 @@
 // functions/index.js
 // 透過聊天室打開 LIFF 服務頁面，不在聊天室建立活動
 // 主揪可發送 LINE Flex：提醒尚未填寫的成員、定案時通知所有成員（不需機器人進群組）
+// dotenv 須最先載入；Admin / Firestore 延遲初始化，避免 firebase deploy 分析程式碼時逾時
+// （見 https://firebase.google.com/docs/functions/tips#avoid_deployment_timeouts_during_initialization）
+require("dotenv").config({ quiet: true });
+
 const functions = require("firebase-functions");
 const line = require("@line/bot-sdk");
 const admin = require("firebase-admin");
 
-admin.initializeApp();
-const db = admin.firestore();
+let dbInstance;
+function getDb() {
+    if (!dbInstance) {
+        if (!admin.apps.length) {
+            admin.initializeApp();
+        }
+        dbInstance = admin.firestore();
+    }
+    return dbInstance;
+}
 
-require("dotenv").config();
-
-const config = {
-    channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN,
-    channelSecret: process.env.CHANNEL_SECRET,
-};
-
-const client = new line.Client(config);
+let lineClient;
+function getLineClient() {
+    if (!lineClient) {
+        lineClient = new line.Client({
+            channelAccessToken: process.env.CHANNEL_ACCESS_TOKEN,
+            channelSecret: process.env.CHANNEL_SECRET,
+        });
+    }
+    return lineClient;
+}
 
 const LIFF_ID = process.env.LIFF_ID || "2008922865-iLv6kFaA";
 
@@ -141,6 +155,7 @@ function setCors(res, req) {
 }
 
 exports.lineWebhook = functions.https.onRequest(async (req, res) => {
+    const client = getLineClient();
     const events = req.body.events || [];
     const results = await Promise.all(
         events.map(async (event) => {
@@ -182,6 +197,7 @@ exports.remindPendingUsers = functions.https.onRequest(async (req, res) => {
     const { userId, groupId, eventId } = body;
     if (!userId || !groupId || !eventId) return res.status(400).json({ error: "Missing required fields" });
     try {
+        const db = getDb();
         const eventSnap = await db.doc(`groups/${groupId}/events/${eventId}`).get();
         if (!eventSnap.exists) return res.status(404).json({ error: "Event not found" });
         if (eventSnap.data().createdBy !== userId) return res.status(403).json({ error: "Only the event host can use this" });
@@ -205,6 +221,7 @@ exports.notifyEventFinalized = functions.https.onRequest(async (req, res) => {
     const { userId, groupId, eventId } = body;
     if (!userId || !groupId || !eventId) return res.status(400).json({ error: "Missing required fields" });
     try {
+        const db = getDb();
         const eventSnap = await db.doc(`groups/${groupId}/events/${eventId}`).get();
         if (!eventSnap.exists) return res.status(404).json({ error: "Event not found" });
         if (eventSnap.data().createdBy !== userId) return res.status(403).json({ error: "Only the event host can use this" });

@@ -14,20 +14,19 @@ const $notify = useNotify();
 
 // 複製純文字
 const copyInviteLink = async () => {
+    const text = `邀請你加入群組一起決定聚會日子!!\n${props.inviteLink}`;
     try {
-        await navigator.clipboard.writeText(props.inviteLink);
+        await navigator.clipboard.writeText(text);
         $notify.alert({
             title: "系統通知",
-            message: "邀請連結已複製！快去貼給 LINE 的朋友吧！",
+            message: "邀請文字已複製！快去邀請朋友吧！",
             variant: "success",
         });
         emit("close");
     } catch (err) {
         $notify.alert({
             title: "請手動複製",
-            message:
-                "您的裝置不支援自動複製，請手動複製以下連結：\n\n" +
-                props.inviteLink,
+            message: "您的裝置不支援自動複製，請手動複製以下內容：\n\n" + text,
             variant: "warning",
         });
     }
@@ -106,7 +105,7 @@ const shareToLine = async () => {
 
 // 降級純文字分享
 const fallbackShare = () => {
-    const text = `邀請你加入「${props.groupName}」！快點擊連結加入吧：`;
+    const text = `邀請你加入「${props.groupName}」群組一起決定聚會日子!!`;
     const lineShareUrl = `https://lineit.line.me/share/ui?text=${encodeURIComponent(text)}&url=${encodeURIComponent(props.inviteLink)}`;
     window.open(lineShareUrl, "_blank");
     emit("close");
