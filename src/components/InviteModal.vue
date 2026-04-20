@@ -38,6 +38,12 @@ const shareToLine = async () => {
     const liffInstance = window?.liff || liff;
     if (liffInstance?.isApiAvailable("shareTargetPicker")) {
         try {
+            // 確保圖片網址為 https 開頭，否則 Flex Message 會發生錯誤
+            const validCoverUrl =
+                props.coverUrl && String(props.coverUrl).startsWith("https://")
+                    ? props.coverUrl
+                    : "https://via.placeholder.com/800x400/508974/FFFFFF?text=Join+Group";
+
             await liffInstance.shareTargetPicker([
                 {
                     type: "flex",
@@ -46,9 +52,7 @@ const shareToLine = async () => {
                         type: "bubble",
                         hero: {
                             type: "image",
-                            url:
-                                props.coverUrl ||
-                                "https://via.placeholder.com/800x400/508974/FFFFFF?text=Join+Group",
+                            url: validCoverUrl,
                             size: "full",
                             aspectRatio: "20:13",
                             aspectMode: "cover",
@@ -98,6 +102,15 @@ const shareToLine = async () => {
             emit("close");
         } catch (error) {
             console.error("分享失敗", error);
+            // 若使用者只是關閉/取消好友選擇器，就不需要進行降級分享
+            if (
+                String(error?.message || error)
+                    .toLowerCase()
+                    .includes("cancel")
+            ) {
+                return;
+            }
+            console.error("Flex Message 分享失敗", error);
             fallbackShare();
         }
     } else {
@@ -108,8 +121,17 @@ const shareToLine = async () => {
 // 降級純文字分享
 const fallbackShare = () => {
     const text = `邀請你加入「${props.groupName}」群組一起決定聚會日子!!`;
-    const lineShareUrl = `https://lineit.line.me/share/ui?text=${encodeURIComponent(text)}&url=${encodeURIComponent(props.inviteLink)}`;
-    window.open(lineShareUrl, "_blank");
+    const fullText = `${text}\n${props.inviteLink}`;
+
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+    if (isMobile || window?.liff?.isInClient?.()) {
+        window.location.href = `https://line.me/R/share?text=${encodeURIComponent(fullText)}`;
+    } else {
+        const lineShareUrl = `https://lineit.line.me/share/ui?text=${encodeURIComponent(text)}&url=${encodeURIComponent(props.inviteLink)}`;
+        window.open(lineShareUrl, "_blank");
+    }
+
     emit("close");
 };
 </script>
