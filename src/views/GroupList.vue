@@ -87,7 +87,7 @@ watch(userProfile, (val) => {
         </div>
 
         <div
-            class="body-container tw:flex-1 tw:min-h-0 tw:w-full tw:overflow-hidden tw:p-4"
+            class="body-container tw:flex-1 tw:min-h-0 tw:w-full tw:overflow-hidden tw:px-4 tw:pt-4"
         >
             <div
                 class="body-container-inner tw:h-full tw:min-h-0 tw:space-y-4 tw:overflow-y-auto"

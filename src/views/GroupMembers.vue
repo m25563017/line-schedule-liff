@@ -49,11 +49,11 @@ onMounted(async () => {
 
     <div v-else-if="group" class="tw:min-h-full tw:bg-gray-50">
         <div
-            class="tw:bg-white tw:p-4 tw:shadow-sm tw:sticky tw:top-0 tw:z-10 tw:flex tw:items-center tw:gap-3"
+            class="tw:bg-primary tw:relative tw:text-white tw:p-4 tw:shadow-sm tw:z-10 tw:flex tw:items-center tw:justify-between tw:gap-3"
         >
             <router-link
                 :to="`/group/${groupId}`"
-                class="tw:p-2 tw:-m-2 tw:text-gray-600 hover:tw:text-gray-900 tw:rounded-lg"
+                class="tw:text-white tw:flex tw:items-center tw:gap-1 tw:text-sm"
             >
                 <svg
                     class="tw:w-5 tw:h-5"
@@ -68,11 +68,10 @@ onMounted(async () => {
                         d="M15.75 19.5 8.25 12l7.5-7.5"
                     />
                 </svg>
+                <span>返回</span>
             </router-link>
-            <h1 class="tw:text-lg tw:font-bold tw:text-gray-800 tw:flex-1">
-                成員名單
-            </h1>
-            <span class="tw:text-sm tw:text-gray-500">
+            <h1 class="tw:text-lg tw:font-bold tw:text-white">成員名單</h1>
+            <span class="tw:text-sm tw:text-white tw:font-bold">
                 {{ memberCount }} 人
             </span>
         </div>

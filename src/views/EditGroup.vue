@@ -262,14 +262,14 @@ const handleDeleteGroup = async () => {
 
     <div v-else class="tw:min-h-full tw:bg-gray-50 tw:flex tw:flex-col">
         <div
-            class="tw:bg-gray-800 tw:text-white tw:p-4 tw:text-center tw:text-lg tw:font-bold tw:shadow-sm tw:relative tw:flex-none"
+            class="tw:bg-primary tw:text-white tw:p-4 tw:text-center tw:text-lg tw:font-bold tw:shadow-sm tw:relative tw:flex-none"
         >
             <router-link
                 :to="`/group/${groupId}`"
-                class="tw:absolute tw:left-4 tw:top-4 tw:text-xl tw:text-gray-300 hover:tw:text-white"
+                class="tw:absolute tw:left-4 tw:top-1/2 tw:-translate-y-1/2 tw:text-white tw:text-sm tw:flex-center tw:gap-1"
             >
                 <svg
-                    class="tw:w-5 tw:h-5"
+                    class="tw:w-4 tw:h-4 tw:mt-1"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke-width="2.5"
@@ -281,6 +281,7 @@ const handleDeleteGroup = async () => {
                         d="M15.75 19.5 8.25 12l7.5-7.5"
                     />
                 </svg>
+                <span>返回</span>
             </router-link>
             群組設定
         </div>

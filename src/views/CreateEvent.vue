@@ -100,7 +100,7 @@ const handleCreate = async () => {
         >
             <router-link
                 :to="`/group/${groupId}`"
-                class="tw:text-sm tw:absolute tw:left-4 tw:top-1/2 tw:-translate-y-1/2"
+                class="tw:text-sm tw:absolute tw:left-4 tw:top-1/2 tw:-translate-y-1/2 tw:text-white tw:flex-center tw:gap-1"
             >
                 <div class="tw:flex tw:items-center tw:gap-2">
                     <svg
@@ -124,7 +124,7 @@ const handleCreate = async () => {
 
         <div class="tw:p-6 tw:max-w-md tw:mx-auto tw:w-full tw:flex-1">
             <div
-                class="tw:bg-white tw:p-6 tw:rounded-xl tw:shadow-sm tw:border tw:space-y-6"
+                class="tw:bg-white tw:p-4 tw:rounded-xl tw:shadow-sm tw:border tw:space-y-6"
             >
                 <div>
                     <label
@@ -156,7 +156,7 @@ const handleCreate = async () => {
                         />
                     </div>
 
-                    <div class="tw:flex-auto">
+                    <div class="tw:flex-none">
                         <label
                             class="tw:block tw:text-sm tw:font-bold tw:text-gray-700 tw:mb-2"
                             >連續開放幾個月</label
