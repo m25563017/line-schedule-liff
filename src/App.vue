@@ -6,6 +6,9 @@ import { LIFF_ID } from "./config/liff";
 import { lineProfileRef } from "./lineProfile";
 import defaultAvatar from "@/assets/img/default-avatar.png";
 
+// 一律將 LIFF 實例掛到全域，避免子元件使用 window.liff 時取得不到物件
+globalThis.liff = liff;
+
 const profile = ref(null);
 const isLiffReady = ref(false);
 const errorMessage = ref("");
@@ -152,7 +155,9 @@ onMounted(async () => {
             v-else
             class="tw:flex-1 tw:min-h-0 tw:flex tw:flex-col tw:overflow-hidden"
         >
-            <main class="tw:flex-1 tw:min-h-0 tw:overflow-y-auto tw:relative tw:w-full">
+            <main
+                class="tw:flex-1 tw:min-h-0 tw:overflow-y-auto tw:relative tw:w-full"
+            >
                 <router-view></router-view>
             </main>
         </div>

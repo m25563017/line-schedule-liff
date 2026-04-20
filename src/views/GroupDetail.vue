@@ -15,7 +15,6 @@ import {
     where,
 } from "firebase/firestore";
 import { useNotify } from "@pieda/core";
-
 import InviteModal from "../components/InviteModal.vue";
 import EventCard from "../components/EventCard.vue";
 import { liffShareUrl } from "../config/liff";
@@ -24,6 +23,7 @@ import {
     setGuestVirtualMemberId,
     resolveGuestVirtualMemberId,
 } from "../utils/guestView";
+import PullToRefresh from "../components/PullToRefresh.vue";
 
 const route = useRoute();
 const groupId = route.params.id;
@@ -33,6 +33,7 @@ const loginLine = inject("loginLine");
 const group = ref(null);
 const events = ref([]);
 const loading = ref(true);
+const isRefreshing = ref(false);
 
 /** 活動列表：每次只抓一頁，避免一次讀取過多 */
 const PAGE_SIZE = 10;
@@ -225,6 +226,39 @@ async function loadMoreEvents() {
     }
 }
 
+// 下拉刷新
+async function handleRefresh() {
+    if (isRefreshing.value) return;
+    isRefreshing.value = true;
+
+    try {
+        // 重新執行原本在 onMounted 裡的邏輯
+        const docRef = doc(db, "groups", groupId);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            group.value = { id: docSnap.id, ...docSnap.data() };
+        }
+
+        await Promise.all([
+            fetchEventTabCounts(),
+            fetchEventsPage({ append: false }),
+        ]);
+
+        // 更新日誌
+        const logsRef = collection(db, "groups", groupId, "activityLogs");
+        const logsQ = query(logsRef, orderBy("createdAt", "desc"), limit(20));
+        const logsSnap = await getDocs(logsQ);
+        activityLogs.value = logsSnap.docs.map((d) => ({
+            id: d.id,
+            ...d.data(),
+        }));
+    } catch (e) {
+        console.error("刷新失敗", e);
+    } finally {
+        isRefreshing.value = false;
+    }
+}
+
 onMounted(async () => {
     try {
         const docRef = doc(db, "groups", groupId);
@@ -263,8 +297,12 @@ onMounted(async () => {
     <div v-if="loading" class="tw:p-10 tw:text-center tw:text-gray-500">
         載入中...
     </div>
-
-    <div v-else-if="group" class="tw:min-h-full tw:bg-gray-50 tw:pb-20">
+    <PullToRefresh
+        v-else-if="group"
+        :refreshing="isRefreshing"
+        @refresh="handleRefresh"
+    >
+        <div class="tw:min-h-full tw:bg-gray-50 tw:pb-20">
         <div class="tw:relative tw:h-48 tw:bg-gray-200">
             <img
                 v-if="group.coverUrl"
@@ -577,4 +615,5 @@ onMounted(async () => {
             @close="showInviteModal = false"
         />
     </div>
+    </PullToRefresh>
 </template>

@@ -9,6 +9,7 @@ import EventStats from "../components/EventStats.vue";
 import DecideModal from "../components/DecideModal.vue";
 import { addGroupActivityLog } from "../utils/activityLog";
 import { liffShareUrl } from "../config/liff";
+import liff from "@line/liff";
 import {
     getGuestVirtualMemberId,
     setGuestVirtualMemberId,
@@ -399,8 +400,7 @@ function getFinalizedFlexMessage() {
 
     const heroUrl = group.value?.coverUrl || FLEX_HERO_PLACEHOLDER;
 
-    const senderName =
-        userProfile.value?.displayName?.trim() || "成員";
+    const senderName = userProfile.value?.displayName?.trim() || "成員";
     const avatarUrl =
         userProfile.value?.pictureUrl &&
         String(userProfile.value.pictureUrl).startsWith("https://")
@@ -506,12 +506,10 @@ function getFinalizedFlexMessage() {
 
 /** @param {import("@line/liff").ShareTargetPickerMessage[]} messages */
 async function shareViaLineShareTargetPicker(messages) {
-    if (
-        typeof window !== "undefined" &&
-        window.liff?.isApiAvailable?.("shareTargetPicker")
-    ) {
+    const liffInstance = window?.liff || liff;
+    if (liffInstance?.isApiAvailable?.("shareTargetPicker")) {
         try {
-            await window.liff.shareTargetPicker(messages);
+            await liffInstance.shareTargetPicker(messages);
             return true;
         } catch (e) {
             if (
@@ -577,7 +575,7 @@ async function shareFinalizedToLine() {
         if (sent === true) {
             $notify.alert({
                 title: "系統通知",
-                message: "已發送到所選的聊天室（由你的帳號發出）。",
+                message: "已發送到所選的聊天室。",
                 variant: "success",
             });
             return;
@@ -627,6 +625,11 @@ const saveChanges = async () => {
                 },
             });
         }
+        $notify.alert({
+            title: "系統通知",
+            message: "填寫成功！",
+            variant: "success",
+        });
 
         isEditing.value = false;
     } catch (e) {
@@ -654,12 +657,12 @@ const saveChanges = async () => {
         class="tw:absolute tw:inset-0 tw:z-0 tw:flex tw:flex-col tw:overflow-hidden tw:bg-gray-50"
     >
         <div
-            class="header-container tw:bg-white tw:p-4 tw:text-center tw:shadow-sm tw:relative tw:flex-none tw:shrink-0 tw:z-10"
+            class="header-container tw:bg-primary tw:p-4 tw:text-center tw:shadow-sm tw:relative tw:flex-none tw:shrink-0 tw:z-10"
         >
             <router-link
                 v-if="!isEditing"
                 :to="`/group/${groupId}`"
-                class="tw:absolute tw:left-4 tw:top-4 tw:text-xl tw:text-gray-500 hover:tw:text-gray-800"
+                class="tw:absolute tw:left-4 tw:top-4 tw:text-xl tw:text-white hover:tw:text-gray-800"
             >
                 <svg
                     class="tw:w-5 tw:h-5"
@@ -678,7 +681,7 @@ const saveChanges = async () => {
             <button
                 v-else
                 @click="stopEditing"
-                class="tw:absolute tw:left-4 tw:top-4 tw:text-xl tw:text-gray-500 hover:tw:text-gray-800"
+                class="tw:absolute tw:left-4 tw:top-4 tw:text-xl tw:text-white hover:tw:text-gray-800"
             >
                 <svg
                     class="tw:w-5 tw:h-5"
@@ -694,14 +697,14 @@ const saveChanges = async () => {
                     />
                 </svg>
             </button>
-            <h1 class="tw:text-lg tw:font-bold tw:text-gray-800">
+            <h1 class="tw:text-lg tw:font-bold tw:text-white">
                 {{ isEditing ? "選擇日期" : event.title }}
             </h1>
 
             <router-link
                 v-if="canManageEvent && !isEditing && !isGuestMode"
                 :to="`/group/${groupId}/event/${eventId}/edit`"
-                class="tw:absolute tw:right-4 tw:top-4 tw:text-gray-400 hover:tw:text-gray-700 tw:transition active:tw:scale-90"
+                class="tw:absolute tw:right-4 tw:top-4 tw:text-white hover:tw:text-gray-800 tw:transition active:tw:scale-90"
                 title="活動設定"
             >
                 <svg
@@ -739,10 +742,7 @@ const saveChanges = async () => {
                     <p class="tw:text-amber-800 tw:mb-2">
                         目前以虛擬名額視角檢視；無法填寫、定案或管理活動。
                     </p>
-                    <div
-                        v-if="virtualMembersList.length > 1"
-                        class="tw:mb-2"
-                    >
+                    <div v-if="virtualMembersList.length > 1" class="tw:mb-2">
                         <label class="tw:block tw:text-xs tw:font-bold tw:mb-1"
                             >切換預覽身分</label
                         >
@@ -868,8 +868,8 @@ const saveChanges = async () => {
                     <div class="tw:flex tw:flex-wrap tw:gap-2">
                         <span
                             v-if="
-                                getAvailableUsersForDate(focusedDate)
-                                    .length === 0
+                                getAvailableUsersForDate(focusedDate).length ===
+                                0
                             "
                             class="tw:text-xs tw:text-gray-400 tw:py-1"
                         >
@@ -958,13 +958,10 @@ const saveChanges = async () => {
             <template v-else-if="!isEditing && !isFinalized">
                 <template v-if="!isGuestMode">
                     <button
+                        v-if="canDecideFinalDate"
                         type="button"
-                        :disabled="!canDecideFinalDate"
-                        :title="
-                            canDecideFinalDate ? '' : '僅活動發起人可決定日期'
-                        "
                         @click="handleDecideClick"
-                        class="tw:flex-1 tw:py-3.5 tw:rounded-xl tw:font-bold tw:shadow-md tw:transition tw:flex tw:items-center tw:justify-center disabled:tw:cursor-not-allowed disabled:tw:bg-gray-200 disabled:tw:text-gray-400 disabled:tw:shadow-none tw:bg-accent tw:text-white active:tw:scale-95 disabled:active:tw:scale-100"
+                        class="tw:flex-none tw:p-3.5 tw:rounded-xl tw:font-bold tw:shadow-md tw:transition tw:flex tw:items-center tw:justify-center tw:bg-accent tw:text-white active:tw:scale-95"
                     >
                         <span class="tw:inline-flex tw:items-center tw:gap-1">
                             <svg
@@ -985,7 +982,7 @@ const saveChanges = async () => {
                     </button>
                     <button
                         @click="startEditing"
-                        class="tw:flex-2 tw:min-w-0 tw:bg-primary tw:text-white tw:py-3.5 tw:rounded-xl tw:font-bold tw:text-lg tw:shadow-md active:tw:scale-95 tw:transition"
+                        class="tw:flex-auto tw:min-w-0 tw:bg-primary tw:text-white tw:py-3.5 tw:rounded-xl tw:font-bold tw:text-lg tw:shadow-md active:tw:scale-95 tw:transition"
                     >
                         <span class="tw:inline-flex tw:items-center tw:gap-2">
                             <span>我要選日子</span>

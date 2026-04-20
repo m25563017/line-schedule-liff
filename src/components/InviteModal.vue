@@ -117,7 +117,7 @@ const fallbackShare = () => {
 <template>
     <div
         v-if="show"
-        class="tw:fixed tw:inset-0 tw:bg-black/50 tw:z-[100] tw:flex tw:items-end tw:justify-center tw:animate-fade-in"
+        class="tw:fixed tw:inset-0 tw:bg-black/50 tw:z-1000 tw:flex tw:items-end tw:justify-center tw:animate-fade-in"
         @click.self="$emit('close')"
     >
         <div
