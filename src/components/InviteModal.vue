@@ -1,5 +1,6 @@
 <script setup>
 import { useNotify } from "@pieda/core";
+import liff from "@line/liff";
 
 const props = defineProps({
     show: Boolean,
@@ -34,9 +35,10 @@ const copyInviteLink = async () => {
 
 // LINE Flex Message
 const shareToLine = async () => {
-    if (window.liff && window.liff.isApiAvailable("shareTargetPicker")) {
+    const liffInstance = window?.liff || liff;
+    if (liffInstance?.isApiAvailable("shareTargetPicker")) {
         try {
-            await window.liff.shareTargetPicker([
+            await liffInstance.shareTargetPicker([
                 {
                     type: "flex",
                     altText: `邀請您加入 ${props.groupName}`,

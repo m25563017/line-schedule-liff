@@ -139,8 +139,10 @@ const handleCreate = async () => {
                     />
                 </div>
 
-                <div class="tw:grid tw:grid-cols-2 tw:gap-3">
-                    <div>
+                <div
+                    class="tw:flex-center tw:flex-row tw:gap-3 tw:w-full tw:flex-wrap"
+                >
+                    <div class="tw:flex-auto">
                         <label
                             class="tw:block tw:text-sm tw:font-bold tw:text-gray-700 tw:mb-2"
                             >起始月份</label
@@ -154,7 +156,7 @@ const handleCreate = async () => {
                         />
                     </div>
 
-                    <div>
+                    <div class="tw:flex-auto">
                         <label
                             class="tw:block tw:text-sm tw:font-bold tw:text-gray-700 tw:mb-2"
                             >連續開放幾個月</label
