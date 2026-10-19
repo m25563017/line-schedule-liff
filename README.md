@@ -1,125 +1,161 @@
-# LINE 共編排程
+# 揪吉 JiuJi
 
-以 Vue 3、Vite、LINE LIFF 與 Firebase 打造的 LINE 群組共編排程應用。在 LINE 內建立群組、發起活動，成員在月曆上勾選有空的日子，主揪可一鍵定案日期（可選時間），減少來回喬時間的訊息。
+在 LINE 裡使用的群組排時間工具。主揪建立活動，成員在月曆上勾選有空的日子，系統自動統計最多人有空的前三名，主揪一鍵定案並分享到 LINE 聊天室。
 
----
+使用 Vue 3 + LINE LIFF + Firebase 打造，無自建伺服器。
 
-## 專案簡介
+> 線上服務需在 LINE 內開啟（LIFF），因此沒有公開網址可直接試用。畫面請見下方展示。
 
-**LINE 共編排程** 針對「約時間」情境設計：主揪在 LINE 建立群組、預先建立虛擬成員名額，再發起活動並設定可選月份；成員透過邀請連結加入並認領身分後，在月曆上點選有空的日期。系統會統計最多人有空的 Top 3 日期，主揪可決定日期定案（可指定時間或僅定日期）；定案後成員無法再修改空檔，避免反覆更改。
+## 畫面展示
 
-- **群組**：可設定名稱、封面圖與成員（含虛擬成員，供之後認領）。
-- **活動**：每個群組可有多個活動，每個活動有標題與可選月份範圍（最多 3 個月），成員在月曆上勾選空檔。
-- **主揪**：可代填虛擬成員空檔、決定活動日期與時間；定案前會提醒尚有成員未填寫。不需將機器人加入 LINE 群組。提醒與定案通知透過 LIFF **分享目標選擇器**（`shareTargetPicker`）由主揪選擇聊天室發出；不支援時會改為**複製文字**到剪貼簿。機器人 Webhook 僅負責加好友／收到訊息時回覆「打開排程」引導進 LIFF。
-- **邀請**：產生專屬加入連結，可複製或一鍵分享 LINE 邀請卡片。
-- **月曆**：以月為單位切換、顯示臺灣假日，點選日期可查看該日誰有空。
-- **使用教學**：群組列表可開啟圖文步驟說明（輪播）；網址 `#/help` 會導向列表並帶出教學。
+| 發起活動 | 勾選有空的日子 | 主揪定案 |
+|:---:|:---:|:---:|
+| <img src="src/assets/img/help/3.png" width="240" alt="發起活動"> | <img src="src/assets/img/help/5.gif" width="240" alt="勾選有空的日子"> | <img src="src/assets/img/help/6.gif" width="240" alt="主揪定案"> |
 
-使用方式：在 LINE 聊天室對機器人傳送訊息或加好友時，機器人會回傳「打開排程」按鈕，點擊後開啟 LIFF 頁面。建立群組與發起活動均在 LIFF 網頁內完成，機器人不需加入任何 LINE 群組。未登入 LINE 時仍可瀏覽部分內容；建立／編輯群組與活動等操作需 LINE 登入。
+## 功能
 
-適用於社團、讀書會、球聚、出遊等需要多人一起喬時間的場合。
-
----
-
-## 功能一覽
-
-| 類別       | 功能                                                                                                             |
-| ---------- | ---------------------------------------------------------------------------------------------------------------- |
-| 登入       | LINE LIFF 登入、開發模式模擬帳號                                                                                 |
-| 群組       | 建立、列表、詳情、編輯（名稱／封面／成員）、刪除、邀請連結、LINE 分享卡片                                        |
-| 成員       | 虛擬成員預先建立、邀請連結加入並認領身分、權限（admin／editor／viewer）、移除成員                                |
-| 活動       | 發起活動（標題與月份範圍）、活動詳情、編輯（標題／月份／清除資料）、刪除活動                                     |
-| 排程       | 月曆選日期填寫空檔、主揪代填、查看每日可參加名單、Top 3 推薦日期、定案（可選 24 小時制時間或僅日期）、定案後鎖定 |
-| 提醒／分享 | 主揪透過 LIFF 分享至聊天室（提醒文字或定案 Flex）；不支援時改複製文字                                            |
-| 其他       | 台灣假日標示、封面圖上傳（Firebase Storage）、群組動作紀錄                                                       |
-
----
+- **群組**：建立群組、設定封面圖、管理成員（admin、editor、viewer 三種角色）
+- **虛擬成員**：主揪可先為還沒加入的朋友建立名額並代填空檔，本人點邀請連結後認領身分
+- **活動**：每個群組可有多個活動，每個活動開放 1～3 個月供成員填寫
+- **月曆填寫**：以月曆勾選有空的日期、顯示台灣假日、點日期查看當天誰有空
+- **統計與定案**：自動算出最多人有空的 Top 3，主揪可選日期與時間定案，定案後鎖定填寫
+- **分享到 LINE**：邀請卡片、填寫提醒與定案通知，由主揪透過 LIFF 分享目標選擇器送到任何聊天室；不支援時改為複製文字
+- **其他**：訪客預覽模式、群組動作紀錄、活動列表分頁、下拉重新整理、使用教學輪播
 
 ## 技術棧
 
-- **前端**：Vue 3、Vue Router（Hash 模式）、Vite 7、Tailwind CSS 4、LINE LIFF、@pieda/core（通知）、Swiper（教學輪播）、date-fns
-- **後端與資料**：Firebase（Firestore、Storage、Functions、Anonymous Auth）、LINE Messaging API（Webhook 回覆與引導）
+| 層級 | 技術 |
+|---|---|
+| 前端 | Vue 3、Vue Router（Hash 模式）、Vite 7、Tailwind CSS 4、date-fns、Swiper |
+| LINE 整合 | LINE LIFF SDK（登入與分享）、LINE Messaging API（機器人回覆） |
+| 後端與資料 | Firebase：Firestore、Cloud Storage、Hosting、Cloud Functions（Node.js）、Anonymous Auth |
 
----
+## 系統架構
 
-## 環境需求
+前端單頁應用在 LINE 內建瀏覽器執行，**直接以 Firebase SDK 讀寫 Firestore**，沒有自建的 API 層。Cloud Functions 只負責接收 LINE Webhook，在使用者加好友或傳訊息時回覆「打開排程」按鈕。
 
-- **前端**：Node.js 18 以上（建議與 Vite 7 相容版本）
-- **Cloud Functions**：Node.js 24（見 `functions/package.json` 的 `engines`）
-- npm 或相容套件管理工具
-
----
-
-## 安裝與本地開發
-
-```bash
-# 安裝依賴套件
-npm install
-
-# 啟動開發伺服器
-npm run dev
-
-# 建置正式版
-npm run build
-
-# 預覽建置結果
-npm run preview
+```mermaid
+flowchart LR
+    U[使用者<br/>LINE 內建瀏覽器] --> SPA[前端 SPA<br/>Vue 3]
+    SPA -->|登入、分享| LIFF[LINE LIFF]
+    SPA -->|直接讀寫| FS[(Firestore)]
+    SPA -->|上傳封面圖| ST[(Storage)]
+    LINE[LINE 平台] -->|Webhook| FN[Cloud Function<br/>lineWebhook]
+    FN -->|回覆訊息| LINE
 ```
 
-開發模式下會使用模擬帳號，無需 LINE 登入即可操作介面。
+完整的 C4 架構圖（System Context 與 Container）見 [docs/architecture.md](docs/architecture.md)。
 
-### LIFF 與設定
+## 技術亮點
 
-- LIFF ID 與對外分享網址邏輯見 `src/config/liff.js`（須與 LINE Developers、Functions 環境變數一致）。
-- Firebase 設定見 `src/utils/firebase.js`，請依實際專案替換，勿將含有金鑰的設定提交至公開儲存庫。
+- **Serverless 架構**：前端直連 Firestore，後端程式碼只剩一個 Webhook 函式，由一人即可維運（[ADR-0002](docs/adr/0002-use-firebase-as-backend-platform.md)）
+- **LIFF 整合**：以 `liff.getProfile()` 取得使用者身分，並用 `shareTargetPicker` 讓機器人不必加入群組（[ADR-0001](docs/adr/0001-use-line-liff-as-delivery-platform.md)、[ADR-0003](docs/adr/0003-share-via-liff-instead-of-bot-in-group.md)）
+- **多人同時填寫不互相覆蓋**：以 Firestore 欄位路徑 `availabilities.{userId}` 只更新自己的資料
+- **反正規化的資料模型**：同時存 `memberIds`（陣列，供 `array-contains` 查詢）與 `members`（詳細資料），見 [docs/data-model.md](docs/data-model.md)
+- **虛擬成員與身分認領**：認領時走訪所有活動，把空檔資料從虛擬 id 搬到真實 `userId`
+- **有效率的列表查詢**：活動列表以游標分頁，數量統計使用 `getCountFromServer` 聚合，不需下載整批資料
 
----
+## 專案結構
 
-## 部署（Firebase Hosting + Functions）
+```
+.
+├─ src/
+│  ├─ App.vue              LIFF 初始化與使用者身分（provide 給各頁面）
+│  ├─ router/              路由與登入守衛
+│  ├─ views/               頁面（群組、活動、邀請認領等）
+│  ├─ components/          可重用元件（月曆、定案彈窗、邀請彈窗等）
+│  ├─ config/liff.js       LIFF ID 與分享網址
+│  └─ utils/               Firebase 初始化、動作紀錄、訪客預覽、假日資料
+├─ functions/              Cloud Functions（LINE Webhook）
+├─ docs/                   技術文件（架構、流程、資料模型、ADR）
+├─ firebase.json           Hosting、Functions、Storage 設定
+└─ storage.rules           Storage 存取規則
+```
 
-前端靜態檔由 `firebase.json` 設定為 `dist` 目錄 SPA 導向：
+## 本地開發
+
+### 環境需求
+
+- Node.js 20.19 以上或 22.12 以上（Vite 7 的需求）
+- Cloud Functions 使用 Node.js 24（見 `functions/package.json` 的 `engines`）
+
+### 啟動前端
 
 ```bash
+npm install
+npm run dev
+```
+
+開發模式（`npm run dev`）不需要 LINE 登入，程式會使用模擬帳號 `test_user_001`。
+
+> **注意**：目前前端的 Firebase 設定直接寫在 `src/utils/firebase.js`，沒有分開發與正式環境，也沒有連接 Emulator。若要在自己的環境開發，請先建立自己的 Firebase 專案並替換設定，以免寫入他人的資料庫。
+
+### 設定自己的 Firebase 與 LINE 專案
+
+1. 到 [Firebase Console](https://console.firebase.google.com) 建立專案，啟用 **Firestore**、**Storage**，並在 Authentication 啟用 **匿名登入**。
+2. 把 `src/utils/firebase.js` 的 `firebaseConfig` 換成你的專案設定，並更新 `.firebaserc` 的專案 ID。
+3. Firestore 的 Security Rules 請依需求自行設定並納入版本控制。
+4. 到 [LINE Developers Console](https://developers.line.biz) 建立 LIFF 應用（Endpoint URL 填 Hosting 網址），並依官方文件啟用分享目標選擇器相關設定；把 LIFF ID 填入 `src/config/liff.js`。
+5. 建立 Messaging API 頻道，並把部署後的 `lineWebhook` 網址填入 Webhook URL。
+
+### 環境變數（Cloud Functions）
+
+Cloud Functions 的機密設定放在 `functions/.env`（已被 `.gitignore` 排除，不會提交）。複製範本後填入你自己的值：
+
+```bash
+cp functions/.env.example functions/.env
+```
+
+| 變數 | 必填 | 說明 |
+|---|---|---|
+| `CHANNEL_ACCESS_TOKEN` | 是 | Messaging API 頻道的 Channel access token |
+| `CHANNEL_SECRET` | 是 | Messaging API 頻道的 Channel secret |
+| `LIFF_ID` | 否 | LIFF ID；未設定時使用程式內的預設值 |
+
+> 前端的 Firebase 設定與 LIFF ID 目前直接寫在程式碼中（`src/utils/firebase.js`、`src/config/liff.js`），不是透過環境變數。
+
+## 部署
+
+```bash
+# 前端：建置並部署到 Firebase Hosting
 npm run build
 firebase deploy --only hosting
-```
 
-Cloud Functions（LINE Webhook 等）：
-
-```bash
-cd functions
-npm install
-```
-
-在 `functions` 目錄建立 `.env`，填入 `CHANNEL_ACCESS_TOKEN`、`CHANNEL_SECRET`；若要覆寫 LIFF ID 可設定 `LIFF_ID`。部署：
-
-```bash
+# Cloud Functions
+cd functions && npm install && cd ..
 firebase deploy --only functions
+
+# 或一次部署全部（建置 + 全部）
+npm run deploy
 ```
-
-`functions/index.js` 另匯出 `remindPendingUsers`、`notifyEventFinalized` 為 HTTP 端點（目前為相容用簡化實作，實際提醒與定案分享由前端 LIFF 完成）。若日後改為由伺服器推送，可再串接這類端點。
-
----
 
 ## 權限說明
 
-- **admin**：群組建立者。可編輯群組、管理成員、刪除群組，並可編輯／刪除任何活動、代填虛擬成員空檔、對任何活動定案。
-- **editor**：可編輯成員。可發起活動，對「自己建立」的活動擁有完整管理權（編輯、刪除、定案），並可代填群組內虛擬成員空檔；對他人建立的活動僅能填寫或修改自己的空檔。
-- **viewer**：僅可查看。只能查看群組與活動，並填寫／修改自己的空檔，無法建立或編輯活動，也不能定案。
+- **admin**：群組建立者，可編輯群組、管理成員、刪除群組，並可管理所有活動
+- **editor**：可發起活動，對自己建立的活動有完整管理權，並可代填虛擬成員的空檔
+- **viewer**：可檢視群組與活動，並填寫自己的空檔
 
-活動的編輯、刪除與定案權限僅限於該活動的建立者（`createdBy`）與群組 admin。
+活動的編輯、刪除與定案僅限活動建立者與群組 admin；**定案僅限活動建立者**。
 
----
+## 技術文件
 
-## 已知限制與可加強項目
+| 文件 | 內容 |
+|---|---|
+| [docs/architecture.md](docs/architecture.md) | C4 架構圖（System Context、Container） |
+| [docs/core-flow.md](docs/core-flow.md) | 建立揪團 → 填寫空檔 → 顯示結果的流程與時序圖 |
+| [docs/data-model.md](docs/data-model.md) | Firestore 資料模型與 ER 圖 |
+| [docs/adr/](docs/adr/) | 架構決策紀錄（ADR）：為什麼用 LIFF、Firebase、LIFF 分享 |
 
-- **Webhook**：請求未實作 LINE 簽章驗證，建議補上以提升安全性。
-- **活動內容**：已定案時間為簡化選項；尚無完整備註、地點欄位或活動說明區塊，可於詳情／編輯頁擴充。
-- **通知**：不依賴付費 LINE Push；無活動日前一天等伺服器排程提醒。
-- **體驗**：網路或 Firestore 錯誤時尚無完整重試或離線暫存；無群組／活動搜尋與深色模式；無法匯出空檔統計或定案結果為圖片檔。
+## 已知限制與未來規劃
 
----
+- 加入即時同步，讓他人填寫的結果不需重新整理就能看到
+- 加入伺服器端排程提醒（例如活動前一天）
+- 強化身分驗證與權限控管
+- 讓認領身分、刪除群組等跨多份文件的操作具備一致性保障
+- 補上自動化測試與 CI
+- 假日資料目前為 2026 年，需逐年更新
+- 搜尋、深色模式、匯出定案結果
 
-## 授權與備註
+## 授權
 
-本專案為私人使用，未標示授權條款。Firebase 與 LINE 相關設定請依實際專案替換，勿將秘密金鑰或 token 提交至公開儲存庫。
+本專案以 [MIT License](LICENSE) 授權。

@@ -80,6 +80,17 @@ erDiagram
     }
 ```
 
+### 真正的集合 vs 內嵌欄位
+
+ER 圖中的方塊不一定都是獨立的集合。判斷方法：**能寫成 `groups/abc/events/xyz` 這種路徑的，才是真正的文件**。
+
+| 種類 | 在 Firestore 裡 | 本專案的例子 |
+|---|---|---|
+| 集合／子集合 | 有自己的文件，可單獨查詢 | `groups`、`events`、`activityLogs` |
+| 內嵌的 map 或陣列 | 只是某份文件裡的欄位 | `members`、`memberIds`、`availabilities`、`actor` |
+
+因此 `members` 與 `availabilities` 讀取群組或活動文件時就一併取得，不需另外查詢；但也不能單獨分頁，且文件大小有上限（約 1 MiB）。
+
 ---
 
 ## `groups/{groupId}`
